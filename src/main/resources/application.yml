@@ -7,14 +7,14 @@ spring:
       enabled: true
 
   datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:car_market}
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:carbuyer_db}
     username: ${DB_USER:postgres}
     password: ${DB_PASSWORD:postgres}
     driver-class-name: org.postgresql.Driver
 
     hikari:
-      maximum-pool-size: 15
-      minimum-idle: 5
+      maximum-pool-size: 10
+      minimum-idle: 10
       connection-timeout: 20000
       idle-timeout: 300000
       max-lifetime: 1200000
@@ -22,7 +22,6 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
-    show-sql: ${SHOW_SQL:false}
     properties:
       hibernate:
         format_sql: true
@@ -32,6 +31,11 @@ spring:
     enabled: true
     locations: classpath:db/migration
     baseline-on-migrate: true
+
+logging:
+  level:
+    org.hibernate.SQL: ${SHOW_SQL_LEVEL:OFF}
+    org.hibernate.orm.results: ${SHOW_SQL_TRACE_LEVEL:OFF}
 
 server:
   port: 8080
