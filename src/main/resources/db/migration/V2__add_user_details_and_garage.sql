@@ -1,0 +1,17 @@
+ALTER TABLE users
+    ADD COLUMN email            VARCHAR(255) UNIQUE NOT NULL,
+    ADD COLUMN password_hash    VARCHAR(255) NOT NULL,
+    ADD COLUMN max_slots        INTEGER DEFAULT 1,
+    ADD COLUMN version          BIGINT DEFAULT 0 NOT NULL;
+
+ALTER TABLE user_balances ADD COLUMN version BIGINT DEFAULT 0 NOT NULL;
+
+CREATE TABLE garage_slots (
+    id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    slot_number INTEGER NOT NULL,
+    car_id BIGINT NULL,
+    status VARCHAR(30) NOT NULL DEFAULT 'EMPTY',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    CONSTRAINT uk_user_slot_number UNIQUE (user_id, slot_number)
+);

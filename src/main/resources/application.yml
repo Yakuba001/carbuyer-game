@@ -69,3 +69,6 @@ app:
     pool-size: 100
     min-action-delay-ms: 1000
     max-action-delay-ms: 5000
+
+  finance:
+    initial-balance: "1000"
