@@ -8,7 +8,6 @@ import java.time.Instant;
 @Entity
 @Table(name = "garage_slots")
 @NoArgsConstructor
-@AllArgsConstructor
 @Getter
 public class GarageSlot {
 
@@ -29,6 +28,13 @@ public class GarageSlot {
     private GarageSlotStatus status = GarageSlotStatus.EMPTY;
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
+
+    public GarageSlot(Long userId, Integer slotNumber, Long carId, GarageSlotStatus status) {
+        this.userId = userId;
+        this.slotNumber = slotNumber;
+        this.carId = carId;
+        this.status = status;
+    }
 
     @Override
     public boolean equals(Object obj) {
