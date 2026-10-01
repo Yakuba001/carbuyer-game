@@ -29,6 +29,10 @@ public class UserBalance {
     @Column(nullable = false)
     private Long version = 0L;
 
+    public UserBalance(BigDecimal balance) {
+        this.balance = balance;
+    }
+
     public void setUser(User user) {
         if (user != null) {
             this.user = user;

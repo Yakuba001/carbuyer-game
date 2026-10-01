@@ -9,7 +9,6 @@ import java.util.Objects;
 @Entity
 @Table(name = "users")
 @NoArgsConstructor
-@AllArgsConstructor
 @Getter
 public class User {
 
@@ -35,6 +34,12 @@ public class User {
     private Long version = 0L;
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, optional = false, orphanRemoval = true, fetch = FetchType.LAZY)
     private UserBalance balance;
+
+    public User(String name, String email, String passwordHash) {
+        this.name = name;
+        this.email = email;
+        this.passwordHash = passwordHash;
+    }
 
     public void setBalance(UserBalance balance) {
         this.balance = balance;

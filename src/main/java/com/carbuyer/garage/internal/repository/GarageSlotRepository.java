@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 import java.util.Optional;
 
-interface GarageSlotRepository extends JpaRepository<GarageSlot, Long> {
+public interface GarageSlotRepository extends JpaRepository<GarageSlot, Long> {
 
     List<GarageSlot> findByUserId(Long userId);
     Optional<GarageSlot> findByUserIdAndSlotNumber(Long userId, Integer slotNumber);
