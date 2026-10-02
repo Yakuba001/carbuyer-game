@@ -39,14 +39,14 @@ public class UserService {
         User newUser = new User(command.name(), command.email(), command.rawPassword());
         UserBalance newBalance = new UserBalance(initialBalance);
         newUser.setBalance(newBalance);
-        userRepository.save(newUser);
-        applicationEventPublisher.publishEvent(new UserCreatedEvent(newUser.getId(), newUser.getMaxSlots()));
+        User savedUser = userRepository.save(newUser);
+        applicationEventPublisher.publishEvent(new UserCreatedEvent(savedUser.getId(), savedUser.getMaxSlots()));
         return new UserDto(
-                newUser.getId(),
-                newUser.getName(),
-                newUser.getEmail(),
-                newUser.getBalance().getBalance(),
-                newUser.getMaxSlots(),
-                newUser.getCreatedAt());
+                savedUser.getId(),
+                savedUser.getName(),
+                savedUser.getEmail(),
+                savedUser.getBalance().getBalance(),
+                savedUser.getMaxSlots(),
+                savedUser.getCreatedAt());
     }
 }
