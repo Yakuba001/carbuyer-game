@@ -20,12 +20,15 @@ spring:
       max-lifetime: 1200000
 
   jpa:
-    hibernate:
-      ddl-auto: validate
     properties:
       hibernate:
+        ddl-auto: validate
         format_sql: true
         dialect: org.hibernate.dialect.PostgreSQLDialect
+        jdbc:
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
 
   flyway:
     enabled: true

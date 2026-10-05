@@ -12,7 +12,8 @@ import java.time.Instant;
 public class GarageSlot {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "garage_slots_seq_gen")
+    @SequenceGenerator(name = "garage_slots_seq_gen", sequenceName = "garage_slots_id_seq", allocationSize = 50)
     private Long id;
     @Column(name = "user_id", nullable = false)
     private Long userId;
