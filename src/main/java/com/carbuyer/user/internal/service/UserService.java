@@ -10,6 +10,7 @@ import com.carbuyer.user.internal.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,18 +29,15 @@ public class UserService {
 
     @Transactional
     public UserDto createUser(CreateUserCommand command) {
-        boolean isEmailTaken = userRepository.existsByEmail(command.email());
-        boolean isNameTaken = userRepository.existsByName(command.name());
-        if (isEmailTaken) {
-            throw new IllegalArgumentException("Email is already taken");
-        }
-        if (isNameTaken) {
-            throw new IllegalArgumentException("Name is already taken");
-        }
         User newUser = new User(command.name(), command.email(), command.rawPassword());
         UserBalance newBalance = new UserBalance(initialBalance);
         newUser.setBalance(newBalance);
-        User savedUser = userRepository.save(newUser);
+        User savedUser;
+        try {
+            savedUser = userRepository.saveAndFlush(newUser);
+        } catch (DataIntegrityViolationException e) {
+            throw new IllegalArgumentException("User with this email or name already exists");
+        }
         applicationEventPublisher.publishEvent(new UserCreatedEvent(savedUser.getId(), savedUser.getMaxSlots()));
         return new UserDto(
                 savedUser.getId(),
