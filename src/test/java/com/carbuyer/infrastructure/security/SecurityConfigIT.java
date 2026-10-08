@@ -1,5 +1,6 @@
 package com.carbuyer.infrastructure.security;
 
+import com.carbuyer.infrastructure.security.controller.AuthController;
 import io.jsonwebtoken.MalformedJwtException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,11 +28,9 @@ public class SecurityConfigIT {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
-    private JwtService jwtService;
-
-    @MockBean
-    private UserDetailsService userDetailsService;
+    @MockBean private JwtService jwtService;
+    @MockBean private UserDetailsService userDetailsService;
+    @MockBean private AuthController controller;
 
     @TestConfiguration
     static class TestControllerConfig {
