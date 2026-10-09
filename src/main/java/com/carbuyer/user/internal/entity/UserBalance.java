@@ -8,8 +8,7 @@ import java.time.Instant;
 
 @Entity
 @Table(name = "user_balances")
-@NoArgsConstructor
-@AllArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
 public class UserBalance {
 

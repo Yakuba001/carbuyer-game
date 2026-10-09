@@ -7,7 +7,7 @@ import java.time.Instant;
 
 @Entity
 @Table(name = "garage_slots")
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Getter
 public class GarageSlot {
 
