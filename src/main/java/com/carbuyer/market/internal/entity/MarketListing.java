@@ -42,12 +42,11 @@ public class MarketListing {
     @Column(name = "closed_at")
     private Instant closedAt;
 
-    public MarketListing(UUID carId, Long sellerId, Long buyerId, BigDecimal price, ListingStatus status) {
+    public MarketListing(UUID carId, Long sellerId, Long buyerId, BigDecimal price) {
         this.carId = carId;
         this.sellerId = sellerId;
         this.buyerId = buyerId;
         this.price = price;
-        this.status = status;
     }
 
     @Override
