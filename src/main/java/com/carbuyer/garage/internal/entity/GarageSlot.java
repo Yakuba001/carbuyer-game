@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Entity
 @Table(name = "garage_slots")
@@ -22,7 +23,7 @@ public class GarageSlot {
     private Integer slotNumber;
     @Setter
     @Column(name = "car_id")
-    private Long carId = null;
+    private UUID carId = null;
     @Setter
     @Column(nullable = false, length = 30)
     @Enumerated(EnumType.STRING)
@@ -30,7 +31,7 @@ public class GarageSlot {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt = Instant.now();
 
-    public GarageSlot(Long userId, Integer slotNumber, Long carId, GarageSlotStatus status) {
+    public GarageSlot(Long userId, Integer slotNumber, UUID carId, GarageSlotStatus status) {
         this.userId = userId;
         this.slotNumber = slotNumber;
         this.carId = carId;
