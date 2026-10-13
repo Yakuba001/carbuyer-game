@@ -32,4 +32,11 @@ public class UserFacadeImpl implements UserFacade {
         return userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalArgumentException("User with this email does not exists"));
     }
+
+    @Override
+    public Long findIdByUsername(String username) {
+        User user = userRepository.findByName(username).orElseThrow(
+                () -> new IllegalArgumentException("User with this name does not exists"));
+        return user.getId();
+    }
 }
