@@ -84,4 +84,6 @@ public class MarketControllerIT {
                 Integer.class, sellerId);
         assertThat(count).isEqualTo(1);
     }
+
+    // TODO: cancelListing and getListings methods need to be covered as well...
 }

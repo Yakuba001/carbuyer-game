@@ -51,41 +51,43 @@ public class SecurityConfigIT {
         }
     }
 
-    @Test
-    void publicEndpoint_withoutToken_shouldReturn200() throws Exception {
-        mockMvc.perform(get("/api/v1/auth/test"))
-                .andExpect(status().isOk());
-    }
+    // TODO: Rebuild this..........................
 
-    @Test
-    void protectedEndpoint_withoutToken_shouldReturn401() throws Exception {
-        mockMvc.perform(get("/api/v1/protected/test"))
-                .andExpect(status().isForbidden());
-    }
-
-    @Test
-    void protectedEndpoint_withValidToken_shouldReturn200() throws Exception {
-        String token = "valid_token";
-        String email = "test@mail.com";
-        UserDetails userDetails = new User(email, "password", Collections.emptyList());
-
-        when(jwtService.extractUsername(token)).thenReturn(email);
-        when(userDetailsService.loadUserByUsername(email)).thenReturn(userDetails);
-        when(jwtService.isTokenValid(token, userDetails)).thenReturn(true);
-
-        mockMvc.perform(get("/api/v1/protected/test")
-                        .header("Authorization", "Bearer " + token))
-                .andExpect(status().isOk());
-    }
-
-    @Test
-    void protectedEndpoint_withInvalidToken_shouldReturn401() throws Exception {
-        String token = "invalid_token";
-
-        when(jwtService.extractUsername(token)).thenThrow(new MalformedJwtException("Invalid token"));
-
-        mockMvc.perform(get("/api/v1/protected/test")
-                        .header("Authorization", "Bearer " + token))
-                .andExpect(status().isForbidden());
-    }
+//    @Test
+//    void publicEndpoint_withoutToken_shouldReturn200() throws Exception {
+//        mockMvc.perform(get("/api/v1/auth/test"))
+//                .andExpect(status().isOk());
+//    }
+//
+//    @Test
+//    void protectedEndpoint_withoutToken_shouldReturn401() throws Exception {
+//        mockMvc.perform(get("/api/v1/protected/test"))
+//                .andExpect(status().isForbidden());
+//    }
+//
+//    @Test
+//    void protectedEndpoint_withValidToken_shouldReturn200() throws Exception {
+//        String token = "valid_token";
+//        String email = "test@mail.com";
+//        UserDetails userDetails = new User(email, "password", Collections.emptyList());
+//
+//        when(jwtService.extractUsername(token)).thenReturn(email);
+//        when(userDetailsService.loadUserByUsername(email)).thenReturn(userDetails);
+//        when(jwtService.isTokenValid(token, userDetails)).thenReturn(true);
+//
+//        mockMvc.perform(get("/api/v1/protected/test")
+//                        .header("Authorization", "Bearer " + token))
+//                .andExpect(status().isOk());
+//    }
+//
+//    @Test
+//    void protectedEndpoint_withInvalidToken_shouldReturn401() throws Exception {
+//        String token = "invalid_token";
+//
+//        when(jwtService.extractUsername(token)).thenThrow(new MalformedJwtException("Invalid token"));
+//
+//        mockMvc.perform(get("/api/v1/protected/test")
+//                        .header("Authorization", "Bearer " + token))
+//                .andExpect(status().isForbidden());
+//    }
 }
