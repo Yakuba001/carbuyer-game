@@ -2,6 +2,7 @@ package com.carbuyer.market.internal.service;
 
 import com.carbuyer.car.api.CarFacade;
 import com.carbuyer.market.api.dto.CreateListingRequestDto;
+import com.carbuyer.market.api.dto.MarketListingResponseDto;
 import com.carbuyer.market.internal.entity.ListingStatus;
 import com.carbuyer.market.internal.entity.MarketListing;
 import com.carbuyer.market.internal.repository.MarketListingRepository;
@@ -11,8 +12,12 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -92,5 +97,27 @@ public class MarketServiceTest {
 
         assertThatThrownBy(() -> service.cancelListing(sellerId, exampleListingId))
                 .isInstanceOf(RuntimeException.class);
+    }
+
+    @Test
+    void findAllByStatus_shouldCorrectMappedFromRawEntityToResponseDto() {
+        UUID carId = UUID.randomUUID();
+        BigDecimal price = new BigDecimal("100");
+        Long sellerId = 1L;
+        PageRequest pageable = PageRequest.of(0, 10);
+        MarketListing exampleListing = new MarketListing(carId, sellerId, null, price);
+        Page<MarketListing> mockPage = new PageImpl<>(List.of(exampleListing), pageable, 1);
+        when(repository.findAllByStatus(ListingStatus.ACTIVE, pageable)).thenReturn(mockPage);
+
+        Page<MarketListingResponseDto> result = service.findAllByStatus(pageable);
+
+        assertThat(result).isNotNull();
+        assertThat(result).hasSize(1);
+
+        MarketListingResponseDto marketListingResponseDto = result.getContent().getFirst();
+        assertThat(marketListingResponseDto).isNotNull();
+        assertThat(carId).isEqualTo(marketListingResponseDto.carId());
+        assertThat(sellerId).isEqualTo(marketListingResponseDto.sellerId());
+        assertThat(price).isEqualTo(marketListingResponseDto.price());
     }
 }

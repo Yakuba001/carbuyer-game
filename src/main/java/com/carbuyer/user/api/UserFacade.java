@@ -8,4 +8,5 @@ public interface UserFacade {
     boolean existByUsername(String username);
     UserDetails save(String username, String email, String password);
     UserDetails findByEmail(String email);
+    Long findIdByUsername(String username);
 }

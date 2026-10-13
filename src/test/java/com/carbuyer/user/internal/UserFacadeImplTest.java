@@ -108,4 +108,12 @@ public class UserFacadeImplTest {
         assertThatThrownBy(() -> userFacadeImpl.findByEmail(notExistingEmail))
                 .isInstanceOf(IllegalArgumentException.class);
     }
+
+    @Test
+    void findIdByUsername_whenUsernameNotExists_shouldThrowIllegalArgumentException() {
+        String notExisting = "notExistingUsername";
+
+        assertThatThrownBy(() -> userFacadeImpl.findIdByUsername(notExisting))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
 }
