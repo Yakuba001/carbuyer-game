@@ -5,7 +5,6 @@ import com.carbuyer.user.api.dto.UserDto;
 import com.carbuyer.user.api.event.UserCreatedEvent;
 import com.carbuyer.user.internal.entity.User;
 import com.carbuyer.user.internal.entity.UserBalance;
-import com.carbuyer.user.internal.repository.UserBalanceRepository;
 import com.carbuyer.user.internal.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,7 +21,6 @@ import java.math.BigDecimal;
 public class UserService {
 
     private final UserRepository userRepository;
-    private final UserBalanceRepository userBalanceRepository;
     @Value("${app.finance.initial-balance:0.00}")
     private BigDecimal initialBalance;
     private final ApplicationEventPublisher applicationEventPublisher;
@@ -46,5 +44,25 @@ public class UserService {
                 savedUser.getBalance().getBalance(),
                 savedUser.getMaxSlots(),
                 savedUser.getCreatedAt());
+    }
+
+    public boolean isUserExistsByEmail(String email) {
+        return userRepository.existsByEmail(email);
+    }
+
+    public boolean isUserExistsByName(String name) {
+        return userRepository.existsByName(name);
+    }
+
+    public String getUsernameByEmail(String email) {
+        User user = userRepository.findByEmail(email).orElseThrow(
+                () -> new IllegalArgumentException("User with this email does not exists"));
+        return user.getName();
+    }
+
+    public Long findIdByUsername(String username) {
+        User user = userRepository.findByName(username).orElseThrow(
+                () -> new IllegalArgumentException("User with this name does not exists"));
+        return user.getId();
     }
 }
