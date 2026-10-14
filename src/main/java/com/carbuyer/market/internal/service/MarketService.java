@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.UUID;
 
 @Service
@@ -48,6 +49,7 @@ public class MarketService {
             throw new RuntimeException("This listing does not belong to: " + sellerId);
         }
         existListing.setStatus(ListingStatus.CANCELLED);
+        existListing.setClosedAt(Instant.now());
     }
 
     @Transactional(readOnly = true)
