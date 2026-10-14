@@ -1,4 +1,4 @@
-package com.carbuyer.car.internal;
+package com.carbuyer.car.internal.service;
 
 import com.carbuyer.car.internal.entity.Car;
 import com.carbuyer.car.internal.repository.CarRepository;
@@ -17,12 +17,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-public class CarFacadeImplTest {
+public class CarServiceTest {
 
     @Mock
     private CarRepository carRepository;
     @InjectMocks
-    private CarFacadeImpl carFacade;
+    private CarService service;
 
     @Test
     void isCarOwner_shouldReturnTrue_whenCarExistsOwnerAndSellerIdNotNullAndThisIdsTheSame() {
@@ -33,7 +33,7 @@ public class CarFacadeImplTest {
                 new Car("228", "Opel", 100, 50, new BigDecimal("200"), ownerId);
         when(carRepository.findById(carId)).thenReturn(Optional.of(exampleCar));
 
-        boolean result = carFacade.isCarOwner(carId, sellerId);
+        boolean result = service.isCarOwner(carId, sellerId);
 
         assertThat(result).isTrue();
     }
@@ -42,7 +42,7 @@ public class CarFacadeImplTest {
     void isCarOwner_shouldThrowIllegalArgumentException_whenCarDoesNotExist() {
         UUID carId = UUID.randomUUID();
         Long sellerId = 1L;
-        assertThatThrownBy(() -> carFacade.isCarOwner(carId, sellerId)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.isCarOwner(carId, sellerId)).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -53,7 +53,7 @@ public class CarFacadeImplTest {
                 new Car("228", "Opel", 100, 50, new BigDecimal("200"), ownerId);
         when(carRepository.findById(carId)).thenReturn(Optional.of(exampleCar));
 
-        boolean result = carFacade.isCarOwner(carId, null);
+        boolean result = service.isCarOwner(carId, null);
 
         assertThat(result).isFalse();
     }
@@ -66,7 +66,7 @@ public class CarFacadeImplTest {
                 new Car("228", "Opel", 100, 50, new BigDecimal("200"), null);
         when(carRepository.findById(carId)).thenReturn(Optional.of(exampleCar));
 
-        boolean result = carFacade.isCarOwner(carId, sellerId);
+        boolean result = service.isCarOwner(carId, sellerId);
 
         assertThat(result).isFalse();
     }
@@ -80,7 +80,7 @@ public class CarFacadeImplTest {
                 new Car("228", "Opel", 100, 50, new BigDecimal("200"), ownerId);
         when(carRepository.findById(carId)).thenReturn(Optional.of(exampleCar));
 
-        boolean result = carFacade.isCarOwner(carId, sellerId);
+        boolean result = service.isCarOwner(carId, sellerId);
 
         assertThat(result).isFalse();
     }

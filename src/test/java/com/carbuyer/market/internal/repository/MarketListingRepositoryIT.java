@@ -46,7 +46,6 @@ public class MarketListingRepositoryIT extends DataJpaIntegrationTest {
         jdbcTemplate.update("INSERT INTO cars (id, vin, model, mileage, condition_score, real_price, owner_id) " +
                         "VALUES (?, ?, ?, ?, ?, ?, ?)",
                 firstCarId, randomVin1, "Test Model", 10000, 85, 15000.00, sellerId);
-
         jdbcTemplate.update("INSERT INTO cars (id, vin, model, mileage, condition_score, real_price, owner_id) " +
                         "VALUES (?, ?, ?, ?, ?, ?, ?)",
                 secondCarId, randomVin2, "Test Model", 10000, 85, 15000.00, sellerId);
