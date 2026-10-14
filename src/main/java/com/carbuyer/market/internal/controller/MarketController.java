@@ -8,7 +8,6 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -43,8 +42,7 @@ public class MarketController {
     }
 
     @GetMapping("/listings")
-    public ResponseEntity<Page<MarketListingResponseDto>> getListings(
-            @PageableDefault(size = 50, page = 0) Pageable pageable) {
+    public ResponseEntity<Page<MarketListingResponseDto>> getListings(Pageable pageable) {
         Page<MarketListingResponseDto> listingsPage = service.findAllByStatus(pageable);
         return ResponseEntity.ok(listingsPage);
     }

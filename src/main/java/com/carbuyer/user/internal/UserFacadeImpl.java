@@ -1,42 +1,43 @@
 package com.carbuyer.user.internal;
 
 import com.carbuyer.user.api.UserFacade;
-import com.carbuyer.user.internal.entity.User;
-import com.carbuyer.user.internal.repository.UserRepository;
+import com.carbuyer.user.api.dto.CreateUserCommand;
+import com.carbuyer.user.api.dto.UserDto;
+import com.carbuyer.user.internal.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
 public class UserFacadeImpl implements UserFacade {
 
-    private final UserRepository userRepository;
+    private final UserService service;
 
     @Override
     public boolean existByEmail(String email) {
-        return userRepository.existsByEmail(email);
+        return service.isUserExistsByEmail(email);
     }
 
     @Override
     public boolean existByUsername(String username) {
-        return userRepository.existsByName(username);
+        return service.isUserExistsByName(username);
     }
 
     @Override
-    public User save(String username, String email, String password) {
-        return userRepository.save(new User(username, email, password));
+    public UserDetails save(String username, String email, String password) {
+        UserDto user = service.createUser(new CreateUserCommand(username, email, password));
+        return User.builder().username(user.name()).build();
     }
 
     @Override
-    public User findByEmail(String email) {
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new IllegalArgumentException("User with this email does not exists"));
+    public UserDetails findByEmail(String email) {
+        return User.builder().username(service.getUsernameByEmail(email)).build();
     }
 
     @Override
     public Long findIdByUsername(String username) {
-        User user = userRepository.findByName(username).orElseThrow(
-                () -> new IllegalArgumentException("User with this name does not exists"));
-        return user.getId();
+        return service.findIdByUsername(username);
     }
 }

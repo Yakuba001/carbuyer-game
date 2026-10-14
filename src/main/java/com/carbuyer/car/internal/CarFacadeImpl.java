@@ -1,8 +1,7 @@
 package com.carbuyer.car.internal;
 
 import com.carbuyer.car.api.CarFacade;
-import com.carbuyer.car.internal.entity.Car;
-import com.carbuyer.car.internal.repository.CarRepository;
+import com.carbuyer.car.internal.service.CarService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -12,16 +11,10 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class CarFacadeImpl implements CarFacade {
 
-    private final CarRepository carRepository;
+    private final CarService service;
 
     @Override
     public boolean isCarOwner(UUID carId, Long sellerId) {
-        Car car = carRepository.findById(carId)
-                .orElseThrow(() -> new IllegalArgumentException("Car with this id does not exists"));
-        Long ownerId = car.getOwnerId();
-        if (sellerId == null || ownerId == null) {
-            return false;
-        }
-        return sellerId.equals(ownerId);
+        return service.isCarOwner(carId, sellerId);
     }
 }
