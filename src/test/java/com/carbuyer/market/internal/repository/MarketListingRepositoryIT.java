@@ -39,25 +39,21 @@ public class MarketListingRepositoryIT extends DataJpaIntegrationTest {
         String randomVin1 = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 17);
         String randomVin2 = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 17);
         String randomVin3 = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 17);
-        jdbcTemplate.execute(String.format(
-                "INSERT INTO users (id, name, email, password_hash) OVERRIDING SYSTEM VALUE VALUES ('%d', '%s', '%s', '%s') ON CONFLICT (id) DO NOTHING",
-                sellerId, sellerName, sellerEmail, sellerPassword
-        ));
-        jdbcTemplate.execute(String.format(
-                "INSERT INTO cars (id, vin, model, mileage, condition_score, real_price, owner_id) " +
-                        "VALUES ('%s', '%s', 'Test Model', 10000, 85, 15000.00, %d)",
-                firstCarId, randomVin1, sellerId
-        ));
-        jdbcTemplate.execute(String.format(
-                "INSERT INTO cars (id, vin, model, mileage, condition_score, real_price, owner_id) " +
-                        "VALUES ('%s', '%s', 'Test Model', 10000, 85, 15000.00, %d)",
-                secondCarId, randomVin2, sellerId
-        ));
-        jdbcTemplate.execute(String.format(
-                "INSERT INTO cars (id, vin, model, mileage, condition_score, real_price, owner_id) " +
-                        "VALUES ('%s', '%s', 'Test Model', 10000, 85, 15000.00, %d)",
-                thirdCarId, randomVin3, sellerId
-        ));
+
+        jdbcTemplate.update("INSERT INTO users (id, name, email, password_hash) OVERRIDING SYSTEM VALUE " +
+                        "VALUES (?, ?, ?, ?)",
+                sellerId, sellerName, sellerEmail, sellerPassword);
+        jdbcTemplate.update("INSERT INTO cars (id, vin, model, mileage, condition_score, real_price, owner_id) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                firstCarId, randomVin1, "Test Model", 10000, 85, 15000.00, sellerId);
+
+        jdbcTemplate.update("INSERT INTO cars (id, vin, model, mileage, condition_score, real_price, owner_id) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                secondCarId, randomVin2, "Test Model", 10000, 85, 15000.00, sellerId);
+        jdbcTemplate.update("INSERT INTO cars (id, vin, model, mileage, condition_score, real_price, owner_id) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                thirdCarId, randomVin3, "Test Model", 10000, 85, 15000.00, sellerId);
+
         MarketListing exampleListing1 = new MarketListing(firstCarId, sellerId, null, price);
         MarketListing exampleListing2 = new MarketListing(secondCarId, sellerId, null, price);
         MarketListing exampleListing3 = new MarketListing(thirdCarId, sellerId, null, price);
