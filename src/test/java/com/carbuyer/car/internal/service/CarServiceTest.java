@@ -2,6 +2,7 @@ package com.carbuyer.car.internal.service;
 
 import com.carbuyer.car.internal.entity.Car;
 import com.carbuyer.car.internal.repository.CarRepository;
+import com.carbuyer.exception.exceptions.CarNotFoundException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -42,7 +43,8 @@ public class CarServiceTest {
     void isCarOwner_shouldThrowIllegalArgumentException_whenCarDoesNotExist() {
         UUID carId = UUID.randomUUID();
         Long sellerId = 1L;
-        assertThatThrownBy(() -> service.isCarOwner(carId, sellerId)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> service.isCarOwner(carId, sellerId))
+                .isInstanceOf(CarNotFoundException.class);
     }
 
     @Test

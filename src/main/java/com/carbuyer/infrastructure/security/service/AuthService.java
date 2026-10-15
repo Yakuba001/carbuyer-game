@@ -26,10 +26,10 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
 
     public AuthResponse register(RegisterRequest request) {
-        if (userFacade.existByEmail(request.email())) {
+        if (userFacade.existsByEmail(request.email())) {
             throw new EmailAlreadyExistsException("Email already exists");
         }
-        if (userFacade.existByUsername(request.username())) {
+        if (userFacade.existsByUsername(request.username())) {
             throw new NameAlreadyExistsException("Username already exists");
         }
         String encodedPassword = passwordEncoder.encode(request.password());

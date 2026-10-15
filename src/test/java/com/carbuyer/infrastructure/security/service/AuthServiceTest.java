@@ -42,7 +42,7 @@ public class AuthServiceTest {
     @Test
     void register_withExistingEmail_shouldThrowException() {
         RegisterRequest request = new RegisterRequest("user", "exist@mail.com", "password123");
-        when(userFacade.existByEmail(request.email())).thenReturn(true);
+        when(userFacade.existsByEmail(request.email())).thenReturn(true);
 
         assertThatThrownBy(() -> authService.register(request))
                 .isInstanceOf(EmailAlreadyExistsException.class);
@@ -56,8 +56,8 @@ public class AuthServiceTest {
         RegisterRequest request = new RegisterRequest("user", "exist@mail.com", "password123");
         UserDetails mockUser = mock(UserDetails.class);
         String encodedPassword = "encodedPassword";
-        when(userFacade.existByEmail(request.email())).thenReturn(false);
-        when(userFacade.existByUsername(request.username())).thenReturn(false);
+        when(userFacade.existsByEmail(request.email())).thenReturn(false);
+        when(userFacade.existsByUsername(request.username())).thenReturn(false);
         when(passwordEncoder.encode(request.password())).thenReturn(encodedPassword);
         when(userFacade.save(request.username(), request.email(), encodedPassword)).thenReturn(mockUser);
         when(jwtService.generateAccessToken(mockUser)).thenReturn("accessToken");

@@ -1,11 +1,16 @@
 package com.carbuyer.user.internal.service;
 
+import com.carbuyer.exception.exceptions.EmailAlreadyExistsException;
+import com.carbuyer.exception.exceptions.NameAlreadyExistsException;
+import com.carbuyer.exception.exceptions.UserAlreadyExistsException;
+import com.carbuyer.exception.exceptions.UserNotFoundException;
 import com.carbuyer.user.api.dto.CreateUserCommand;
 import com.carbuyer.user.api.dto.UserDto;
 import com.carbuyer.user.api.event.UserCreatedEvent;
 import com.carbuyer.user.internal.entity.User;
 import com.carbuyer.user.internal.entity.UserBalance;
 import com.carbuyer.user.internal.repository.UserRepository;
+import org.hibernate.exception.ConstraintViolationException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
@@ -34,7 +39,16 @@ public class UserService {
         try {
             savedUser = userRepository.saveAndFlush(newUser);
         } catch (DataIntegrityViolationException e) {
-            throw new IllegalArgumentException("User with this email or name already exists");
+            if (e.getCause() instanceof ConstraintViolationException err) {
+                String constraintName = err.getConstraintName();
+                if ("users_email_key".equals(constraintName)) {
+                    throw new EmailAlreadyExistsException("Email already exists");
+                }
+                if ("users_name_key".equals(constraintName)) {
+                    throw new NameAlreadyExistsException("Name already exists");
+                }
+            }
+            throw new UserAlreadyExistsException("User data conflict");
         }
         applicationEventPublisher.publishEvent(new UserCreatedEvent(savedUser.getId(), savedUser.getMaxSlots()));
         return new UserDto(
@@ -56,13 +70,23 @@ public class UserService {
 
     public String getUsernameByEmail(String email) {
         User user = userRepository.findByEmail(email).orElseThrow(
-                () -> new IllegalArgumentException("User with this email does not exists"));
+                () -> new UserNotFoundException("User with this email: " + email + " does not exists"));
         return user.getName();
     }
 
     public Long findIdByUsername(String username) {
         User user = userRepository.findByName(username).orElseThrow(
-                () -> new IllegalArgumentException("User with this name does not exists"));
+                () -> new UserNotFoundException("User with this name: " + username + " does not exists"));
         return user.getId();
+    }
+
+    public boolean existsById(Long id) {
+        return userRepository.existsById(id);
+    }
+
+    public BigDecimal getUserBalanceById(Long id) {
+        User user = userRepository.findById(id).orElseThrow(
+                () -> new UserNotFoundException("User with this id: " + id + " does not exists"));
+        return user.getBalance().getBalance();
     }
 }

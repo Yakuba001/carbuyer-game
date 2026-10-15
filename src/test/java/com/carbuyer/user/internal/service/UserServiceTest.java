@@ -1,5 +1,7 @@
 package com.carbuyer.user.internal.service;
 
+import com.carbuyer.exception.exceptions.UserAlreadyExistsException;
+import com.carbuyer.exception.exceptions.UserNotFoundException;
 import com.carbuyer.user.api.dto.CreateUserCommand;
 import com.carbuyer.user.api.dto.UserDto;
 import com.carbuyer.user.api.event.UserCreatedEvent;
@@ -40,7 +42,7 @@ public class UserServiceTest {
 
         assertThatThrownBy(() ->
                 userService.createUser(new CreateUserCommand("name", "email", "password")))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(UserAlreadyExistsException.class);
 
         verify(userRepository).saveAndFlush(any(User.class));
         verify(applicationEventPublisher, never()).publishEvent(any());
@@ -142,7 +144,7 @@ public class UserServiceTest {
         when(userRepository.findByEmail(notExistingEmail)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> userService.getUsernameByEmail(notExistingEmail))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(UserNotFoundException.class);
     }
 
     @Test
@@ -150,6 +152,31 @@ public class UserServiceTest {
         String notExisting = "notExistingUsername";
 
         assertThatThrownBy(() -> userService.findIdByUsername(notExisting))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(UserNotFoundException.class);
+    }
+
+    @Test
+    void existsById_whenUserWithInputIdExists_returnTrue() {
+        long id = 1L;
+        when(userRepository.existsById(id)).thenReturn(true);
+
+        boolean result = userService.existsById(id);
+
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    void getUserBalanceById_whenUserWithInputIdExists_returnUserBalance() {
+        long id = 1L;
+        BigDecimal balance = new BigDecimal("228.21");
+        User testUser = new User("Boss", "boss@g.c", "pass123");
+        UserBalance testUserBalance = new UserBalance(balance);
+        testUser.setBalance(testUserBalance);
+        when(userRepository.findById(id)).thenReturn(Optional.of(testUser));
+
+        BigDecimal result = userService.getUserBalanceById(id);
+
+        assertThat(result).isNotNull();
+        assertThat(result).isEqualTo(balance);
     }
 }
