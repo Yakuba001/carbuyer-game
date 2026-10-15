@@ -2,6 +2,7 @@ package com.carbuyer.exception;
 
 import com.carbuyer.exception.dto.ErrorResponse;
 import com.carbuyer.exception.exceptions.*;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -18,7 +19,8 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({
             EmailAlreadyExistsException.class,
             NameAlreadyExistsException.class,
-            UserAlreadyExistsException.class})
+            UserAlreadyExistsException.class,
+            DataIntegrityViolationException.class})
     public ResponseEntity<ErrorResponse> handleConflict(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ErrorResponse(409, "Conflict", ex.getMessage(), Instant.now()));
@@ -49,8 +51,8 @@ public class GlobalExceptionHandler {
             NotCarOwnerException.class,
             NotListingOwnerException.class})
     public ResponseEntity<ErrorResponse> handleNotCarOwner(RuntimeException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponse(400, "Bad request", ex.getMessage(), Instant.now()));
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(new ErrorResponse(403, "Forbidden", ex.getMessage(), Instant.now()));
     }
 
     @ExceptionHandler({
