@@ -118,6 +118,27 @@ public class MarketListingRepositoryIT extends DataJpaIntegrationTest {
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 
+    @Test
+    void checkConstraint_shouldThrownException_whenDeleteUserWhichHaveMarketListings() {
+        long sellerId = 1L;
+        MarketListing exampleListing = addToDbAndGetTestMarketListing(sellerId, null);
+        marketListingRepository.saveAndFlush(exampleListing);
+
+        assertThatThrownBy(() -> jdbcTemplate.update("DELETE FROM users WHERE id = ?", sellerId))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void checkConstraint_shouldThrownException_whenDeleteCarWhichUseInMarketListings() {
+        long sellerId = 1L;
+        MarketListing exampleListing = addToDbAndGetTestMarketListing(sellerId, null);
+        marketListingRepository.saveAndFlush(exampleListing);
+        UUID carId = exampleListing.getCarId();
+
+        assertThatThrownBy(() -> jdbcTemplate.update("DELETE FROM cars WHERE id = ?", carId))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
     private MarketListing addToDbAndGetTestMarketListing(long sellerId, Long ownerId) {
         UUID carId = UUID.randomUUID();
         BigDecimal price = new BigDecimal("100");
