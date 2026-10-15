@@ -53,9 +53,11 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(400, "Bad request", ex.getMessage(), Instant.now()));
     }
 
-    @ExceptionHandler(UserNotFoundException.class)
+    @ExceptionHandler({
+            UserNotFoundException.class,
+            CarNotFoundException.class})
     public ResponseEntity<ErrorResponse> handleUserNotFound(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(new ErrorResponse(404, "User not found", ex.getMessage(), Instant.now()));
+                .body(new ErrorResponse(404, "Not found", ex.getMessage(), Instant.now()));
     }
 }
