@@ -70,13 +70,13 @@ public class UserService {
 
     public String getUsernameByEmail(String email) {
         User user = userRepository.findByEmail(email).orElseThrow(
-                () -> new UserNotFoundException("User with this email:" + email + " does not exists"));
+                () -> new UserNotFoundException("User with this email: " + email + " does not exists"));
         return user.getName();
     }
 
     public Long findIdByUsername(String username) {
         User user = userRepository.findByName(username).orElseThrow(
-                () -> new UserNotFoundException("User with this name:" + username + " does not exists"));
+                () -> new UserNotFoundException("User with this name: " + username + " does not exists"));
         return user.getId();
     }
 }

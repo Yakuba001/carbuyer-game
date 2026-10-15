@@ -1,6 +1,8 @@
 package com.carbuyer.market.internal.service;
 
 import com.carbuyer.car.api.CarFacade;
+import com.carbuyer.exception.exceptions.NotCarOwnerException;
+import com.carbuyer.exception.exceptions.NotListingOwnerException;
 import com.carbuyer.market.api.dto.CreateListingRequestDto;
 import com.carbuyer.market.api.dto.MarketListingResponseDto;
 import com.carbuyer.market.internal.entity.ListingStatus;
@@ -27,7 +29,7 @@ public class MarketService {
     public MarketListingResponseDto createListing(Long sellerId, CreateListingRequestDto request) {
         UUID carId = request.carId();
         if (!carFacade.isCarOwner(carId, sellerId)) {
-            throw new IllegalArgumentException("This seller is not owner of car");
+            throw new NotCarOwnerException("This seller: " + sellerId + " is not owner");
         }
         BigDecimal price = request.price();
         MarketListing listing = new MarketListing(carId, sellerId, null, price);
@@ -46,7 +48,7 @@ public class MarketService {
         MarketListing existListing = repository.findById(listingId)
                 .orElseThrow(() -> new IllegalArgumentException("Listing with id: " + listingId + " not found"));
         if (!existListing.getSellerId().equals(sellerId)) {
-            throw new RuntimeException("This listing does not belong to: " + sellerId);
+            throw new NotListingOwnerException("This listing does not belong to: " + sellerId);
         }
         existListing.setStatus(ListingStatus.CANCELLED);
         existListing.setClosedAt(Instant.now());

@@ -45,6 +45,14 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(400, "Bad request", message, Instant.now()));
     }
 
+    @ExceptionHandler({
+            NotCarOwnerException.class,
+            NotListingOwnerException.class})
+    public ResponseEntity<ErrorResponse> handleNotCarOwner(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse(400, "Bad request", ex.getMessage(), Instant.now()));
+    }
+
     @ExceptionHandler(UserNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleUserNotFound(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)

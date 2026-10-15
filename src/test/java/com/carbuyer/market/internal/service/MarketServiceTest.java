@@ -1,6 +1,8 @@
 package com.carbuyer.market.internal.service;
 
 import com.carbuyer.car.api.CarFacade;
+import com.carbuyer.exception.exceptions.NotCarOwnerException;
+import com.carbuyer.exception.exceptions.NotListingOwnerException;
 import com.carbuyer.market.api.dto.CreateListingRequestDto;
 import com.carbuyer.market.api.dto.MarketListingResponseDto;
 import com.carbuyer.market.internal.entity.ListingStatus;
@@ -66,7 +68,7 @@ public class MarketServiceTest {
         when(carFacade.isCarOwner(carId, sellerId)).thenReturn(false);
 
         assertThatThrownBy(() -> service.createListing(sellerId, exampleRequest))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(NotCarOwnerException.class);
 
         verifyNoInteractions(repository);
     }
@@ -96,7 +98,7 @@ public class MarketServiceTest {
         when(repository.findById(exampleListingId)).thenReturn(Optional.of(exampleListing));
 
         assertThatThrownBy(() -> service.cancelListing(sellerId, exampleListingId))
-                .isInstanceOf(RuntimeException.class);
+                .isInstanceOf(NotListingOwnerException.class);
     }
 
     @Test
