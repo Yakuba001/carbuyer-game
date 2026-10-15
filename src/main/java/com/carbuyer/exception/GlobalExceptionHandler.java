@@ -1,9 +1,7 @@
 package com.carbuyer.exception;
 
 import com.carbuyer.exception.dto.ErrorResponse;
-import com.carbuyer.exception.exceptions.EmailAlreadyExistsException;
-import com.carbuyer.exception.exceptions.InvalidTokenException;
-import com.carbuyer.exception.exceptions.NameAlreadyExistsException;
+import com.carbuyer.exception.exceptions.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -17,7 +15,10 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler({EmailAlreadyExistsException.class, NameAlreadyExistsException.class})
+    @ExceptionHandler({
+            EmailAlreadyExistsException.class,
+            NameAlreadyExistsException.class,
+            UserAlreadyExistsException.class})
     public ResponseEntity<ErrorResponse> handleConflict(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ErrorResponse(409, "Conflict", ex.getMessage(), Instant.now()));
@@ -42,5 +43,11 @@ public class GlobalExceptionHandler {
                 .collect(Collectors.joining(", "));
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorResponse(400, "Bad request", message, Instant.now()));
+    }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleUserNotFound(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ErrorResponse(404, "User not found", ex.getMessage(), Instant.now()));
     }
 }
