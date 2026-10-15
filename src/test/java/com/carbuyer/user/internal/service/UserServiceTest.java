@@ -154,4 +154,29 @@ public class UserServiceTest {
         assertThatThrownBy(() -> userService.findIdByUsername(notExisting))
                 .isInstanceOf(UserNotFoundException.class);
     }
+
+    @Test
+    void existsById_whenUserWithInputIdExists_returnTrue() {
+        long id = 1L;
+        when(userRepository.existsById(id)).thenReturn(true);
+
+        boolean result = userService.existsById(id);
+
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    void getUserBalanceById_whenUserWithInputIdExists_returnUserBalance() {
+        long id = 1L;
+        BigDecimal balance = new BigDecimal("228.21");
+        User testUser = new User("Boss", "boss@g.c", "pass123");
+        UserBalance testUserBalance = new UserBalance(balance);
+        testUser.setBalance(testUserBalance);
+        when(userRepository.findById(id)).thenReturn(Optional.of(testUser));
+
+        BigDecimal result = userService.getUserBalanceById(id);
+
+        assertThat(result).isNotNull();
+        assertThat(result).isEqualTo(balance);
+    }
 }

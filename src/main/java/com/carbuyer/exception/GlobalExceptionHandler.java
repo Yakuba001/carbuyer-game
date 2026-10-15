@@ -48,6 +48,16 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler({
+            MissedDataException.class,
+            InactiveListingException.class,
+            SelfBuyingException.class,
+            InsufficientFundsException.class})
+    public ResponseEntity<ErrorResponse> handleMissedData(MissedDataException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse(400, "Bad request", ex.getMessage(), Instant.now()));
+    }
+
+    @ExceptionHandler({
             NotCarOwnerException.class,
             NotListingOwnerException.class})
     public ResponseEntity<ErrorResponse> handleNotCarOwner(RuntimeException ex) {
@@ -57,7 +67,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler({
             UserNotFoundException.class,
-            CarNotFoundException.class})
+            CarNotFoundException.class,
+            ListingNotFoundException.class})
     public ResponseEntity<ErrorResponse> handleUserNotFound(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(new ErrorResponse(404, "Not found", ex.getMessage(), Instant.now()));

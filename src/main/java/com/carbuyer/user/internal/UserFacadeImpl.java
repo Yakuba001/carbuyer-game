@@ -9,6 +9,8 @@ import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+
 @Service
 @RequiredArgsConstructor
 public class UserFacadeImpl implements UserFacade {
@@ -16,12 +18,12 @@ public class UserFacadeImpl implements UserFacade {
     private final UserService service;
 
     @Override
-    public boolean existByEmail(String email) {
+    public boolean existsByEmail(String email) {
         return service.isUserExistsByEmail(email);
     }
 
     @Override
-    public boolean existByUsername(String username) {
+    public boolean existsByUsername(String username) {
         return service.isUserExistsByName(username);
     }
 
@@ -39,5 +41,15 @@ public class UserFacadeImpl implements UserFacade {
     @Override
     public Long findIdByUsername(String username) {
         return service.findIdByUsername(username);
+    }
+
+    @Override
+    public boolean existsById(Long id) {
+        return service.existsById(id);
+    }
+
+    @Override
+    public BigDecimal getUserBalanceById(Long id) {
+        return service.getUserBalanceById(id);
     }
 }

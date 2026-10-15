@@ -79,4 +79,14 @@ public class UserService {
                 () -> new UserNotFoundException("User with this name: " + username + " does not exists"));
         return user.getId();
     }
+
+    public boolean existsById(Long id) {
+        return userRepository.existsById(id);
+    }
+
+    public BigDecimal getUserBalanceById(Long id) {
+        User user = userRepository.findById(id).orElseThrow(
+                () -> new UserNotFoundException("User with this id: " + id + " does not exists"));
+        return user.getBalance().getBalance();
+    }
 }
