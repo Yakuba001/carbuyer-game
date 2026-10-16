@@ -52,4 +52,9 @@ public class UserFacadeImpl implements UserFacade {
     public BigDecimal getUserBalanceById(Long id) {
         return service.getUserBalanceById(id);
     }
+
+    @Override
+    public boolean carPurchase(Long userId, Long sellerId, BigDecimal amount) {
+        return service.carPurchase(userId, sellerId, amount);
+    }
 }

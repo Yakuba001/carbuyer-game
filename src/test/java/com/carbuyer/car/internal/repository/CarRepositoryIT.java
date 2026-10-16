@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @Transactional
@@ -86,7 +87,43 @@ public class CarRepositoryIT extends DataJpaIntegrationTest {
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 
-    private void addTestCorrectCarToDb(long userId) {
+    @Test
+    void setNewCarOwner_shouldReturnZero_whenCarCantChangedHisOwner() {
+        long userId = 1L;
+        long anotherOwnerId = 2L;
+        long buyerId = 3L;
+        addUserToDb(anotherOwnerId);
+        UUID carId = addTestCorrectCarToDb(anotherOwnerId);
+
+        int result = carRepository.setNewCarOwner(userId, buyerId, carId);
+
+        assertThat(result).isEqualTo(0);
+    }
+
+    @Test
+    void setNewCarOwner_shouldReturnOne_whenCarChangedHisOwner() {
+        long ownerId = 1L;
+        addUserToDb(ownerId);
+        long buyerId = 2L;
+        String username = "John";
+        String userEmail = "bigJohn@g.com";
+        String userPassword = "bobby123";
+        jdbcTemplate.update("INSERT INTO users (id, name, email, password_hash) OVERRIDING SYSTEM VALUE " +
+                        "VALUES (?, ?, ?, ?)",
+                buyerId, username, userEmail, userPassword);
+        UUID carId = addTestCorrectCarToDb(ownerId);
+        Car exampleCar = carRepository.findById(carId).orElseThrow();
+        long currentOwnerId = exampleCar.getOwnerId();
+
+        int result = carRepository.setNewCarOwner(ownerId, buyerId, carId);
+
+        long newOwnerId = carRepository.findById(carId).orElseThrow().getOwnerId();
+        assertThat(result).isEqualTo(1);
+        assertThat(currentOwnerId).isEqualTo(ownerId);
+        assertThat(newOwnerId).isEqualTo(buyerId);
+    }
+
+    private UUID addTestCorrectCarToDb(long userId) {
         String randomVin1 = UUID.randomUUID().toString().replace("-", "").substring(0, 17);
         String model = "Opel";
         int mileage = 10000;
@@ -94,6 +131,7 @@ public class CarRepositoryIT extends DataJpaIntegrationTest {
         BigDecimal price = new BigDecimal("123.21");
         Car car = new Car(randomVin1, model, mileage, conditionScore, price, userId);
         carRepository.saveAndFlush(car);
+        return car.getId();
     }
 
     private void addUserToDb(long userId) {

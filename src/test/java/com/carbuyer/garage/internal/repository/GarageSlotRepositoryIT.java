@@ -5,11 +5,14 @@ import com.carbuyer.garage.internal.entity.GarageSlot;
 import com.carbuyer.garage.internal.entity.GarageSlotStatus;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -43,10 +46,6 @@ public class GarageSlotRepositoryIT extends DataJpaIntegrationTest {
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 
-    /// ALTER TABLE garage_slots
-    ///     ADD CONSTRAINT check_garage_slot_status
-    ///     CHECK (status IN ('EMPTY', 'OCCUPIED'));
-
     @Test
     void foreignKey_shouldSetCarIdToNullOnCarDelete() {
         long userId = 1L;
@@ -76,17 +75,70 @@ public class GarageSlotRepositoryIT extends DataJpaIntegrationTest {
     void garageStatusConstraint_shouldThrowDataIntegrityViolationException_whenStatusIsNotEmptyOrOccupied() {
         long userId = 1L;
         int slotNumber = 1;
-        String username = "Bob";
-        String userEmail = "bob@g.com";
-        String userPassword = "bobby123";
-        addUserToDb(userId, username, userEmail, userPassword);
-        GarageSlot first = new GarageSlot(userId, slotNumber, null, GarageSlotStatus.EMPTY);
-
-        garageSlotRepository.saveAndFlush(first);
+        GarageSlotStatus status = GarageSlotStatus.EMPTY;
+        addUserAndGarageSlotToDb(userId, slotNumber, status);
 
         assertThatThrownBy(() -> jdbcTemplate.update("UPDATE garage_slots SET status = 'BROKEN' " +
                         "WHERE user_id = ? AND slot_number = ?",
                 userId, slotNumber)).isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = GarageSlotStatus.class, names = {"EMPTY", "OCCUPIED"})
+    void existByUserIdAndStatus_shouldReturnTrue_whenUserHasGarageSlotWithStatus(GarageSlotStatus status) {
+        long userId = 1L;
+        int slotNumber = 1;
+        addUserAndGarageSlotToDb(userId, slotNumber, status);
+
+        boolean result = garageSlotRepository.existsByUserIdAndStatus(userId, status);
+
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    void existByUserIdAndStatus_shouldReturnFalse_whenUserHasNoGarageSlotWithStatus() {
+        long userId = 1L;
+        int slotNumber = 1;
+        GarageSlotStatus status = GarageSlotStatus.OCCUPIED;
+        addUserAndGarageSlotToDb(userId, slotNumber, status);
+
+        boolean result = garageSlotRepository.existsByUserIdAndStatus(userId, GarageSlotStatus.EMPTY);
+
+        assertThat(result).isFalse();
+    }
+
+    @Test
+    void occupyFirstEmptySlot_shouldChangeStatusToOccupiedAndSetCarToThisSlot() {
+        long userId = 1L;
+        int slotNumber = 1;
+        UUID carId = UUID.randomUUID();
+        String randomVin1 = UUID.randomUUID().toString().replace("-", "").substring(0, 17);
+        String model = "Opel";
+        int mileage = 10000;
+        int conditionScore = 85;
+        BigDecimal price = new BigDecimal("123.21");
+        long slotId = addUserAndGarageSlotToDb(userId, slotNumber, GarageSlotStatus.EMPTY);
+        jdbcTemplate.update("INSERT INTO cars (id, vin, model, mileage, condition_score, real_price, owner_id) " +
+                        "OVERRIDING SYSTEM VALUE VALUES (?, ?, ?, ?, ?, ?, ?)",
+                carId, randomVin1, model, mileage, conditionScore, price, userId);
+
+        int result = garageSlotRepository.occupyFirstEmptySlot(userId, carId, GarageSlotStatus.OCCUPIED);
+
+        GarageSlot afterChangingSlot = garageSlotRepository.findById(slotId).orElseThrow();
+
+        assertThat(result).isEqualTo(1);
+        assertThat(afterChangingSlot.getCarId()).isEqualTo(carId);
+        assertThat(afterChangingSlot.getStatus()).isEqualTo(GarageSlotStatus.OCCUPIED);
+    }
+
+    private long addUserAndGarageSlotToDb(long userId, Integer slotNumber, GarageSlotStatus status) {
+        String username = "Bob";
+        String userEmail = "bob@g.com";
+        String userPassword = "bobby123";
+        addUserToDb(userId, username, userEmail, userPassword);
+        GarageSlot slot = new GarageSlot(userId, slotNumber, null, status);
+        GarageSlot savedSlot = garageSlotRepository.saveAndFlush(slot);
+        return savedSlot.getId();
     }
 
     private void addUserToDb(long userId, String username, String email, String password) {

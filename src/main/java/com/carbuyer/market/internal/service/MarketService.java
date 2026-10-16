@@ -2,6 +2,7 @@ package com.carbuyer.market.internal.service;
 
 import com.carbuyer.car.api.CarFacade;
 import com.carbuyer.exception.exceptions.*;
+import com.carbuyer.garage.api.GarageFacade;
 import com.carbuyer.market.api.dto.CreateListingRequestDto;
 import com.carbuyer.market.api.dto.MarketListingResponseDto;
 import com.carbuyer.market.internal.entity.ListingStatus;
@@ -26,6 +27,7 @@ public class MarketService {
     private final MarketListingRepository repository;
     private final CarFacade carFacade;
     private final UserFacade userFacade;
+    private final GarageFacade garageFacade;
 
     @Transactional
     public MarketListingResponseDto createListing(Long sellerId, CreateListingRequestDto request) {
@@ -60,12 +62,12 @@ public class MarketService {
     public Page<MarketListingResponseDto> findAllByStatus(Pageable pageable) {
         return repository.findAllByStatus(ListingStatus.ACTIVE, pageable)
                 .map(listing -> new MarketListingResponseDto(
-                listing.getId(),
-                listing.getCarId(),
-                listing.getSellerId(),
-                listing.getPrice(),
-                listing.getStatus().toString(),
-                listing.getCreatedAt()));
+                        listing.getId(),
+                        listing.getCarId(),
+                        listing.getSellerId(),
+                        listing.getPrice(),
+                        listing.getStatus().toString(),
+                        listing.getCreatedAt()));
     }
 
     @Transactional
@@ -76,21 +78,38 @@ public class MarketService {
         if (!userFacade.existsById(userId)) {
             throw new UserNotFoundException("User with id: " + userId + " not found");
         }
-        MarketListing listing = repository.findById(listingId)
+
+        MarketListing listing = repository.findByIdForUpdate(listingId)
                 .orElseThrow(() -> new ListingNotFoundException("Listing with id: " + listingId + " not found"));
+
         if (listing.getStatus() != ListingStatus.ACTIVE) {
             throw new InactiveListingException("Listing with id: " + listingId + " is not active");
         }
         BigDecimal userBalance = userFacade.getUserBalanceById(userId);
         if (userBalance.compareTo(listing.getPrice()) < 0) {
-            throw new InsufficientFundsException("Insufficient funds");
+            throw new InsufficientFundsException("You don`t have enough funds");
         }
-
-        // TODO: check empty garage slot for new car...............
-
+        if (!garageFacade.isHasGarageSlotWithInputStatus(userId, "EMPTY")) {
+            throw new NoEmptySlotsException("You don`t have empty slots");
+        }
         Long ownerId = listing.getSellerId();
         if (Objects.equals(ownerId, userId)) {
             throw new SelfBuyingException("You can`t buy your own car");
         }
+        if (!userFacade.carPurchase(userId, ownerId, listing.getPrice())) {
+            throw new InsufficientFundsException("Something went wrong");
+        }
+        if (!carFacade.setNewCarOwner(ownerId, userId, listing.getCarId())) {
+            throw new ChangeCarOwnerException("Something went wrong");
+        }
+        if (!garageFacade.isChangedStatusFromEmptyToOccupiedAndSetCarId(
+                userId,
+                listing.getCarId(),
+                "OCCUPIED")) {
+            throw new ChangeCarOwnerException("Something went wrong");
+        }
+        listing.setStatus(ListingStatus.SOLD);
+        listing.setBuyerId(userId);
+        listing.setClosedAt(Instant.now());
     }
 }

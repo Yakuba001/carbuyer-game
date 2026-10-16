@@ -9,6 +9,7 @@ import com.carbuyer.user.api.dto.UserDto;
 import com.carbuyer.user.api.event.UserCreatedEvent;
 import com.carbuyer.user.internal.entity.User;
 import com.carbuyer.user.internal.entity.UserBalance;
+import com.carbuyer.user.internal.repository.UserBalanceRepository;
 import com.carbuyer.user.internal.repository.UserRepository;
 import org.hibernate.exception.ConstraintViolationException;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ import java.math.BigDecimal;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final UserBalanceRepository userBalanceRepository;
     @Value("${app.finance.initial-balance:0.00}")
     private BigDecimal initialBalance;
     private final ApplicationEventPublisher applicationEventPublisher;
@@ -88,5 +90,18 @@ public class UserService {
         User user = userRepository.findById(id).orElseThrow(
                 () -> new UserNotFoundException("User with this id: " + id + " does not exists"));
         return user.getBalance().getBalance();
+    }
+
+    @Transactional
+    public boolean carPurchase(Long buyerId, Long sellerId, BigDecimal amount) {
+        int rowsDebited = userBalanceRepository.minusBalanceIfSufficient(buyerId, amount);
+        if (rowsDebited == 0) {
+            return false;
+        }
+        int rowsCredited = userBalanceRepository.plusBalance(sellerId, amount);
+        if (rowsCredited == 0) {
+            throw new UserNotFoundException("User with this id: " + buyerId + " does not exists");
+        }
+        return true;
     }
 }
