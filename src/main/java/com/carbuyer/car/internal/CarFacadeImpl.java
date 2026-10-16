@@ -17,4 +17,9 @@ public class CarFacadeImpl implements CarFacade {
     public boolean isCarOwner(UUID carId, Long sellerId) {
         return service.isCarOwner(carId, sellerId);
     }
+
+    @Override
+    public boolean setNewCarOwner(Long sellerId, Long buyerId, UUID carId) {
+        return service.changeCarOwner(sellerId, buyerId, carId);
+    }
 }

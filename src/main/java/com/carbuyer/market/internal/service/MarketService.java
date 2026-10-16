@@ -97,7 +97,9 @@ public class MarketService {
         if (!userFacade.carPurchase(userId, ownerId, listing.getPrice())) {
             throw new InsufficientFundsException("Something went wrong");
         }
-
+        if (!carFacade.setNewCarOwner(ownerId, userId, listing.getCarId())) {
+            throw new ChangeCarOwnerException("Something went wrong");
+        }
 
 
     }

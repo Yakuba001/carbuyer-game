@@ -86,4 +86,28 @@ public class CarServiceTest {
 
         assertThat(result).isFalse();
     }
+
+    @Test
+    void changeCarOwner_shouldReturnFalse_whenRepositoryReturnZero() {
+        UUID carId = UUID.randomUUID();
+        Long sellerId = 1L;
+        Long ownerId = 2L;
+        when(carRepository.setNewCarOwner(ownerId, sellerId, carId)).thenReturn(0);
+
+        boolean result = service.changeCarOwner(ownerId, sellerId, carId);
+
+        assertThat(result).isFalse();
+    }
+
+    @Test
+    void changeCarOwner_shouldReturnTrue_whenRepositoryReturnOne() {
+        UUID carId = UUID.randomUUID();
+        Long sellerId = 1L;
+        Long ownerId = 2L;
+        when(carRepository.setNewCarOwner(ownerId, sellerId, carId)).thenReturn(1);
+
+        boolean result = service.changeCarOwner(ownerId, sellerId, carId);
+
+        assertThat(result).isTrue();
+    }
 }
