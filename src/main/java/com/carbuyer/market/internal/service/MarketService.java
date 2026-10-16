@@ -85,15 +85,20 @@ public class MarketService {
         }
         BigDecimal userBalance = userFacade.getUserBalanceById(userId);
         if (userBalance.compareTo(listing.getPrice()) < 0) {
-            throw new InsufficientFundsException("Insufficient funds");
+            throw new InsufficientFundsException("You don`t have enough funds");
         }
         if (!garageFacade.isHasGarageSlotWithInputStatus(userId, "EMPTY")) {
             throw new NoEmptySlotsException("You don`t have empty slots");
         }
-
         Long ownerId = listing.getSellerId();
         if (Objects.equals(ownerId, userId)) {
             throw new SelfBuyingException("You can`t buy your own car");
         }
+        if (!userFacade.carPurchase(userId, ownerId, listing.getPrice())) {
+            throw new InsufficientFundsException("Something went wrong");
+        }
+
+
+
     }
 }

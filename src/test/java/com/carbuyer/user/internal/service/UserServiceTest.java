@@ -7,6 +7,7 @@ import com.carbuyer.user.api.dto.UserDto;
 import com.carbuyer.user.api.event.UserCreatedEvent;
 import com.carbuyer.user.internal.entity.User;
 import com.carbuyer.user.internal.entity.UserBalance;
+import com.carbuyer.user.internal.repository.UserBalanceRepository;
 import com.carbuyer.user.internal.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -30,6 +31,8 @@ public class UserServiceTest {
 
     @Mock
     private UserRepository userRepository;
+    @Mock
+    private UserBalanceRepository userBalanceRepository;
     @Mock
     private ApplicationEventPublisher applicationEventPublisher;
     @InjectMocks
@@ -178,5 +181,44 @@ public class UserServiceTest {
 
         assertThat(result).isNotNull();
         assertThat(result).isEqualTo(balance);
+    }
+
+    @Test
+    void carPurchase_shouldReturnFalse_whenBuyerDoesNotHaveEnoughAmountInBalance() {
+        BigDecimal testAmount =  new BigDecimal("228.21");
+        long buyerId = 1L;
+        long sellerId = 2L;
+        when(userBalanceRepository.minusBalanceIfSufficient(anyLong(), any(BigDecimal.class))).thenReturn(0);
+
+        boolean result = userService.carPurchase(buyerId, sellerId, testAmount);
+
+        assertThat(result).isFalse();
+        verify(userBalanceRepository, never()).plusBalance(anyLong(), any());
+    }
+
+    @Test
+    void carPurchase_shouldThrownException_whenSellerDoesNotExists() {
+        BigDecimal testAmount =  new BigDecimal("228.21");
+        long buyerId = 1L;
+        long sellerId = 2L;
+        when(userBalanceRepository.minusBalanceIfSufficient(anyLong(), any(BigDecimal.class))).thenReturn(1);
+        when(userBalanceRepository.plusBalance(anyLong(), any(BigDecimal.class)))
+                .thenThrow(new UserNotFoundException("User not found"));
+
+        assertThatThrownBy(() -> userService.carPurchase(buyerId, sellerId, testAmount))
+                .isInstanceOf(UserNotFoundException.class);
+    }
+
+    @Test
+    void carPurchase_shouldReturnTrue_whenBuyerHasEnoughAmountInBalanceAndSellerExists() {
+        BigDecimal testAmount =  new BigDecimal("228.21");
+        long buyerId = 1L;
+        long sellerId = 2L;
+        when(userBalanceRepository.minusBalanceIfSufficient(anyLong(), any(BigDecimal.class))).thenReturn(1);
+        when(userBalanceRepository.plusBalance(anyLong(), any(BigDecimal.class))).thenReturn(1);
+
+        boolean result = userService.carPurchase(buyerId, sellerId, testAmount);
+
+        assertThat(result).isTrue();
     }
 }
