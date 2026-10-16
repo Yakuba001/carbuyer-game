@@ -62,12 +62,12 @@ public class MarketService {
     public Page<MarketListingResponseDto> findAllByStatus(Pageable pageable) {
         return repository.findAllByStatus(ListingStatus.ACTIVE, pageable)
                 .map(listing -> new MarketListingResponseDto(
-                listing.getId(),
-                listing.getCarId(),
-                listing.getSellerId(),
-                listing.getPrice(),
-                listing.getStatus().toString(),
-                listing.getCreatedAt()));
+                        listing.getId(),
+                        listing.getCarId(),
+                        listing.getSellerId(),
+                        listing.getPrice(),
+                        listing.getStatus().toString(),
+                        listing.getCreatedAt()));
     }
 
     @Transactional
@@ -100,7 +100,12 @@ public class MarketService {
         if (!carFacade.setNewCarOwner(ownerId, userId, listing.getCarId())) {
             throw new ChangeCarOwnerException("Something went wrong");
         }
-
+        if (!garageFacade.isChangedStatusFromEmptyToOccupiedAndSetCarId(
+                userId,
+                listing.getCarId(),
+                "OCCUPIED")) {
+            throw new ChangeCarOwnerException("Something went wrong");
+        }
 
     }
 }

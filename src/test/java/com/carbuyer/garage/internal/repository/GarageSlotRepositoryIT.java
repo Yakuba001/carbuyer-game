@@ -12,6 +12,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -106,13 +107,38 @@ public class GarageSlotRepositoryIT extends DataJpaIntegrationTest {
         assertThat(result).isFalse();
     }
 
-    private void addUserAndGarageSlotToDb(long userId, Integer slotNumber, GarageSlotStatus status) {
+    @Test
+    void occupyFirstEmptySlot_shouldChangeStatusToOccupiedAndSetCarToThisSlot() {
+        long userId = 1L;
+        int slotNumber = 1;
+        UUID carId = UUID.randomUUID();
+        String randomVin1 = UUID.randomUUID().toString().replace("-", "").substring(0, 17);
+        String model = "Opel";
+        int mileage = 10000;
+        int conditionScore = 85;
+        BigDecimal price = new BigDecimal("123.21");
+        long slotId = addUserAndGarageSlotToDb(userId, slotNumber, GarageSlotStatus.EMPTY);
+        jdbcTemplate.update("INSERT INTO cars (id, vin, model, mileage, condition_score, real_price, owner_id) " +
+                        "OVERRIDING SYSTEM VALUE VALUES (?, ?, ?, ?, ?, ?, ?)",
+                carId, randomVin1, model, mileage, conditionScore, price, userId);
+
+        int result = garageSlotRepository.occupyFirstEmptySlot(userId, carId, GarageSlotStatus.OCCUPIED);
+
+        GarageSlot afterChangingSlot = garageSlotRepository.findById(slotId).orElseThrow();
+
+        assertThat(result).isEqualTo(1);
+        assertThat(afterChangingSlot.getCarId()).isEqualTo(carId);
+        assertThat(afterChangingSlot.getStatus()).isEqualTo(GarageSlotStatus.OCCUPIED);
+    }
+
+    private long addUserAndGarageSlotToDb(long userId, Integer slotNumber, GarageSlotStatus status) {
         String username = "Bob";
         String userEmail = "bob@g.com";
         String userPassword = "bobby123";
         addUserToDb(userId, username, userEmail, userPassword);
         GarageSlot slot = new GarageSlot(userId, slotNumber, null, status);
-        garageSlotRepository.saveAndFlush(slot);
+        GarageSlot savedSlot = garageSlotRepository.saveAndFlush(slot);
+        return savedSlot.getId();
     }
 
     private void addUserToDb(long userId, String username, String email, String password) {
