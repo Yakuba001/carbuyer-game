@@ -139,12 +139,17 @@ public class MarketListingRepositoryIT extends DataJpaIntegrationTest {
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 
-    private MarketListing addToDbAndGetTestMarketListing(long sellerId, Long ownerId) {
+    @Test
+    void findByIdForUpdate_shouldUpdateEntityOnlyOneTime_whenEnvironmentAreConcurrency() {
+
+    }
+
+    private MarketListing addToDbAndGetTestMarketListing(long sellerId, Long buyerId) {
         UUID carId = UUID.randomUUID();
         BigDecimal price = new BigDecimal("100");
         addUserToDb(sellerId);
         addTestCorrectCarToDb(sellerId, carId, price);
-        return new MarketListing(carId, sellerId, ownerId, price);
+        return new MarketListing(carId, sellerId, buyerId, price);
     }
 
     private void addTestCorrectCarToDb(long userId, UUID carId, BigDecimal price) {

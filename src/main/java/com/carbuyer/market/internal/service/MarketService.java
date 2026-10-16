@@ -78,8 +78,10 @@ public class MarketService {
         if (!userFacade.existsById(userId)) {
             throw new UserNotFoundException("User with id: " + userId + " not found");
         }
-        MarketListing listing = repository.findById(listingId)
+
+        MarketListing listing = repository.findByIdForUpdate(listingId)
                 .orElseThrow(() -> new ListingNotFoundException("Listing with id: " + listingId + " not found"));
+
         if (listing.getStatus() != ListingStatus.ACTIVE) {
             throw new InactiveListingException("Listing with id: " + listingId + " is not active");
         }
@@ -106,6 +108,8 @@ public class MarketService {
                 "OCCUPIED")) {
             throw new ChangeCarOwnerException("Something went wrong");
         }
-
+        listing.setStatus(ListingStatus.SOLD);
+        listing.setBuyerId(userId);
+        listing.setClosedAt(Instant.now());
     }
 }
