@@ -2,6 +2,7 @@ package com.carbuyer.market.internal.service;
 
 import com.carbuyer.car.api.CarFacade;
 import com.carbuyer.exception.exceptions.*;
+import com.carbuyer.garage.api.GarageFacade;
 import com.carbuyer.market.api.dto.CreateListingRequestDto;
 import com.carbuyer.market.api.dto.MarketListingResponseDto;
 import com.carbuyer.market.internal.entity.ListingStatus;
@@ -26,6 +27,7 @@ public class MarketService {
     private final MarketListingRepository repository;
     private final CarFacade carFacade;
     private final UserFacade userFacade;
+    private final GarageFacade garageFacade;
 
     @Transactional
     public MarketListingResponseDto createListing(Long sellerId, CreateListingRequestDto request) {
@@ -85,8 +87,9 @@ public class MarketService {
         if (userBalance.compareTo(listing.getPrice()) < 0) {
             throw new InsufficientFundsException("Insufficient funds");
         }
-
-        // TODO: check empty garage slot for new car...............
+        if (!garageFacade.isHasGarageSlotWithInputStatus(userId, "EMPTY")) {
+            throw new NoEmptySlotsException("You don`t have empty slots");
+        }
 
         Long ownerId = listing.getSellerId();
         if (Objects.equals(ownerId, userId)) {
