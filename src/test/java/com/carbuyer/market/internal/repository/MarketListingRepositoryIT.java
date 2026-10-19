@@ -22,6 +22,8 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -149,33 +151,36 @@ public class MarketListingRepositoryIT extends DataJpaIntegrationTest {
     void findByIdForUpdate_shouldUpdateEntityOnlyOneTime_whenEnvironmentIsConcurrency() {
         MarketListing exampleListing = addToDbAndGetTestMarketListing(null);
         marketListingRepository.saveAndFlush(exampleListing);
-        CountDownLatch countDownLatch  = new CountDownLatch(1);
+        CountDownLatch countDownLatch = new CountDownLatch(1);
         UUID listingId = exampleListing.getId();
         ListingStatus oldStatus = ListingStatus.ACTIVE;
         ListingStatus newStatus = ListingStatus.SOLD;
         long delayMs = 100L;
 
         List<CompletableFuture<Boolean>> futures = new ArrayList<>();
+        List<Boolean> resultList;
 
-        for (int i = 0; i < 5; i++) {
-            futures.add(CompletableFuture.supplyAsync(() -> {
-                try {
-                    countDownLatch.await();
-                    return testService.updateListingStatusWithDelay(listingId, oldStatus, newStatus, delayMs);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    return false;
-                }
-            }));
+        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            for (int i = 0; i < 5; i++) {
+                futures.add(CompletableFuture.supplyAsync(() -> {
+                    try {
+                        countDownLatch.await();
+                        return testService.updateListingStatusWithDelay(listingId, oldStatus, newStatus, delayMs);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        return false;
+                    }
+                }, executor));
+            }
+            countDownLatch.countDown();
+
+            resultList = futures.stream()
+                    .map(CompletableFuture::join)
+                    .filter(el -> el == true)
+                    .toList();
         }
-        countDownLatch.countDown();
 
-        List<Boolean> trueListings = futures.stream()
-                .map(CompletableFuture::join)
-                .filter(el -> el == true)
-                .toList();
-
-        assertThat(trueListings).hasSize(1);
+        assertThat(resultList).hasSize(1);
 
         dataBaseCleanup(listingId);
     }

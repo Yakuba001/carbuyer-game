@@ -78,17 +78,17 @@ public class MarketService {
         if (!userFacade.existsById(userId)) {
             throw new UserNotFoundException("User with id: " + userId + " not found");
         }
-
+        BigDecimal userBalance = userFacade.getUserBalanceById(userId);
         MarketListing listing = repository.findByIdForUpdate(listingId)
                 .orElseThrow(() -> new ListingNotFoundException("Listing with id: " + listingId + " not found"));
-
         if (listing.getStatus() != ListingStatus.ACTIVE) {
             throw new InactiveListingException("Listing with id: " + listingId + " is not active");
         }
-        BigDecimal userBalance = userFacade.getUserBalanceById(userId);
         if (userBalance.compareTo(listing.getPrice()) < 0) {
             throw new InsufficientFundsException("You don`t have enough funds");
         }
+
+
         if (!garageFacade.isHasGarageSlotWithInputStatus(userId, "EMPTY")) {
             throw new NoEmptySlotsException("You don`t have empty slots");
         }
