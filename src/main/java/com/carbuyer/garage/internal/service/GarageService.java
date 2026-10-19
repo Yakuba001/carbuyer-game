@@ -1,11 +1,13 @@
 package com.carbuyer.garage.internal.service;
 
+import com.carbuyer.garage.internal.entity.GarageSlot;
 import com.carbuyer.garage.internal.entity.GarageSlotStatus;
 import com.carbuyer.garage.internal.repository.GarageSlotRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -21,7 +23,8 @@ public class GarageService {
         }
         try {
             GarageSlotStatus enumStatus = GarageSlotStatus.valueOf(status.trim().toUpperCase());
-            return repository.existsByUserIdAndStatus(userId, enumStatus);
+            Optional<GarageSlot> emptySlot = repository.findFirstByUserIdAndStatus(userId, enumStatus);
+            return emptySlot.isPresent();
         } catch (IllegalArgumentException e) {
             return false;
         }
