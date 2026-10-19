@@ -8,17 +8,27 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.TestComponent;
+import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @Transactional
+@Import(GarageSlotRepositoryIT.GarageSlotServiceTest.class)
 public class GarageSlotRepositoryIT extends DataJpaIntegrationTest {
 
     @Autowired
@@ -27,6 +37,8 @@ public class GarageSlotRepositoryIT extends DataJpaIntegrationTest {
     private JdbcTemplate jdbcTemplate;
     @Autowired
     private EntityManager em;
+    @Autowired
+    private GarageSlotServiceTest testService;
 
     @Test
     void checkConstraint_oneUserCanHaveOnlyUniqueGarageSlotsNumber() {
@@ -90,7 +102,9 @@ public class GarageSlotRepositoryIT extends DataJpaIntegrationTest {
         int slotNumber = 1;
         addUserAndGarageSlotToDb(userId, slotNumber, status);
 
-        boolean result = garageSlotRepository.existsByUserIdAndStatus(userId, status);
+        GarageSlot resultSlot = garageSlotRepository.findFirstByUserIdAndStatus(userId, status)
+                .orElseThrow(() -> new IllegalArgumentException("Garage id " + slotNumber + " does not exist"));
+        boolean result = resultSlot.getStatus().equals(status);
 
         assertThat(result).isTrue();
     }
@@ -102,9 +116,10 @@ public class GarageSlotRepositoryIT extends DataJpaIntegrationTest {
         GarageSlotStatus status = GarageSlotStatus.OCCUPIED;
         addUserAndGarageSlotToDb(userId, slotNumber, status);
 
-        boolean result = garageSlotRepository.existsByUserIdAndStatus(userId, GarageSlotStatus.EMPTY);
+        GarageSlot resultSlot = garageSlotRepository.findFirstByUserIdAndStatus(userId, GarageSlotStatus.EMPTY)
+                .orElse(null);
 
-        assertThat(result).isFalse();
+        assertThat(resultSlot).isNull();
     }
 
     @Test
@@ -129,6 +144,75 @@ public class GarageSlotRepositoryIT extends DataJpaIntegrationTest {
         assertThat(result).isEqualTo(1);
         assertThat(afterChangingSlot.getCarId()).isEqualTo(carId);
         assertThat(afterChangingSlot.getStatus()).isEqualTo(GarageSlotStatus.OCCUPIED);
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void findFirstByUserIdAndStatus_shouldFindFirstAndChangeStatusOnce_whenEnvironmentIsConcurrency() {
+        long userId = 1L;
+        int oldSlotNumber = 1;
+        int newSlotNumber = 2;
+        GarageSlotStatus status = GarageSlotStatus.EMPTY;
+        addUserAndGarageSlotToDb(userId, oldSlotNumber, status);
+        CountDownLatch countDownLatch = new CountDownLatch(1);
+        long delayMs = 100L;
+
+        List<CompletableFuture<Boolean>> futures = new ArrayList<>();
+        List<Boolean> resultList;
+
+        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()){
+            for (int i = 0; i < 5; i++) {
+                futures.add(CompletableFuture.supplyAsync(() -> {
+                    try {
+                        countDownLatch.await();
+                        return testService
+                                .updateGarageSlotWithDelay(userId, status, oldSlotNumber, newSlotNumber, delayMs);
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        return false;
+                    }
+                }, executor));
+            }
+            countDownLatch.countDown();
+            resultList = futures.stream()
+                    .map(CompletableFuture::join)
+                    .filter(el -> el == true)
+                    .toList();
+        }
+
+        assertThat(resultList).hasSize(1);
+
+        jdbcTemplate.update("DELETE FROM users WHERE id = ?", userId);
+    }
+
+    @TestComponent
+    public static class GarageSlotServiceTest {
+
+        @Autowired
+        private GarageSlotRepository garageSlotRepository;
+
+        @Transactional(propagation = Propagation.REQUIRES_NEW)
+        public boolean updateGarageSlotWithDelay(Long userId,
+                                                 GarageSlotStatus status,
+                                                 Integer oldSlotNumber,
+                                                 Integer newSlotNumber,
+                                                 long delay) {
+            GarageSlot slot = garageSlotRepository.findFirstByUserIdAndStatus(userId, status)
+                    .orElseThrow(() -> new IllegalArgumentException("Garage id " + status + " does not exist"));
+            if (!slot.getSlotNumber().equals(oldSlotNumber)) {
+                return false;
+            }
+            if (delay > 0) {
+                try {
+                    Thread.sleep(delay);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+            slot.setSlotNumber(newSlotNumber);
+            garageSlotRepository.saveAndFlush(slot);
+            return true;
+        }
     }
 
     private long addUserAndGarageSlotToDb(long userId, Integer slotNumber, GarageSlotStatus status) {

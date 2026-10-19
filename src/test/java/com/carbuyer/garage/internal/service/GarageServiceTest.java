@@ -1,5 +1,6 @@
 package com.carbuyer.garage.internal.service;
 
+import com.carbuyer.garage.internal.entity.GarageSlot;
 import com.carbuyer.garage.internal.entity.GarageSlotStatus;
 import com.carbuyer.garage.internal.repository.GarageSlotRepository;
 import org.junit.jupiter.api.Test;
@@ -10,6 +11,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -51,7 +53,12 @@ public class GarageServiceTest {
     void isHasGarageSlotWithInputStatus_shouldReturnTrue_whenStatusIsValidAndSlotExistsAndEditingInputString() {
         long userId = 1L;
         String status = " EmPtY";
-        when(garageSlotRepository.existsByUserIdAndStatus(anyLong(), any(GarageSlotStatus.class))).thenReturn(true);
+        UUID carId = UUID.randomUUID();
+        int slotNumber = 1;
+        GarageSlotStatus testStatus = GarageSlotStatus.EMPTY;
+        GarageSlot garageSlot = new GarageSlot(userId, slotNumber, carId, testStatus);
+        when(garageSlotRepository.findFirstByUserIdAndStatus(anyLong(), any(GarageSlotStatus.class)))
+                .thenReturn(Optional.of(garageSlot));
 
         boolean result = garageService.isHasGarageSlotWithInputStatus(userId, status);
 

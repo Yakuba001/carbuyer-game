@@ -172,10 +172,8 @@ public class UserServiceTest {
     void getUserBalanceById_whenUserWithInputIdExists_returnUserBalance() {
         long id = 1L;
         BigDecimal balance = new BigDecimal("228.21");
-        User testUser = new User("Boss", "boss@g.c", "pass123");
         UserBalance testUserBalance = new UserBalance(balance);
-        testUser.setBalance(testUserBalance);
-        when(userRepository.findById(id)).thenReturn(Optional.of(testUser));
+        when(userBalanceRepository.findBalanceByUserId(id)).thenReturn(Optional.of(testUserBalance));
 
         BigDecimal result = userService.getUserBalanceById(id);
 

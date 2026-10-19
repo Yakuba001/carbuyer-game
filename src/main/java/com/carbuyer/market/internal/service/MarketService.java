@@ -29,6 +29,9 @@ public class MarketService {
     private final UserFacade userFacade;
     private final GarageFacade garageFacade;
 
+    private static final String EMPTY_GARAGE_SLOT = "EMPTY";
+    private static final String OCCUPIED_GARAGE_SLOT = "OCCUPIED";
+
     @Transactional
     public MarketListingResponseDto createListing(Long sellerId, CreateListingRequestDto request) {
         UUID carId = request.carId();
@@ -78,20 +81,22 @@ public class MarketService {
         if (!userFacade.existsById(userId)) {
             throw new UserNotFoundException("User with id: " + userId + " not found");
         }
-
         MarketListing listing = repository.findByIdForUpdate(listingId)
                 .orElseThrow(() -> new ListingNotFoundException("Listing with id: " + listingId + " not found"));
-
+        BigDecimal userBalance = userFacade.getUserBalanceById(userId);
+        // TODO: set to sellerBalance pessimistic lock to avoid deadlock... or mb create method with double-locking to atomicity approach...
         if (listing.getStatus() != ListingStatus.ACTIVE) {
             throw new InactiveListingException("Listing with id: " + listingId + " is not active");
         }
-        BigDecimal userBalance = userFacade.getUserBalanceById(userId);
         if (userBalance.compareTo(listing.getPrice()) < 0) {
             throw new InsufficientFundsException("You don`t have enough funds");
         }
-        if (!garageFacade.isHasGarageSlotWithInputStatus(userId, "EMPTY")) {
+        if (!garageFacade.isHasGarageSlotWithInputStatus(userId, EMPTY_GARAGE_SLOT)) {
             throw new NoEmptySlotsException("You don`t have empty slots");
         }
+
+
+        // TODO: solve this part of method to avoid deadlocks and race conditions...
         Long ownerId = listing.getSellerId();
         if (Objects.equals(ownerId, userId)) {
             throw new SelfBuyingException("You can`t buy your own car");
@@ -105,7 +110,7 @@ public class MarketService {
         if (!garageFacade.isChangedStatusFromEmptyToOccupiedAndSetCarId(
                 userId,
                 listing.getCarId(),
-                "OCCUPIED")) {
+                OCCUPIED_GARAGE_SLOT)) {
             throw new ChangeCarOwnerException("Something went wrong");
         }
         listing.setStatus(ListingStatus.SOLD);
