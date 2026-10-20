@@ -13,14 +13,9 @@ import java.util.Optional;
 
 public interface UserBalanceRepository extends JpaRepository<UserBalance, Long> {
 
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("UPDATE UserBalance ub SET ub.balance = ub.balance - :amount " +
-            "WHERE ub.userId = :buyerId AND ub.balance >= :amount")
-    int minusBalanceIfSufficient(@Param("buyerId") Long buyerId, @Param("amount") BigDecimal amount);
-    @Modifying(clearAutomatically = true, flushAutomatically = true)
-    @Query("UPDATE UserBalance ub SET ub.balance = ub.balance + :amount " +
-            "WHERE ub.userId = :sellerId")
-    int plusBalance(@Param("sellerId") Long sellerId, @Param("amount") BigDecimal amount);
+    @Modifying(clearAutomatically = true)
+    @Query("UPDATE UserBalance ub SET ub.balance = :newBalance WHERE ub.userId = :userId")
+    int updateBalance(@Param("userId") Long userId, @Param("newBalance") BigDecimal newBalance);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT ub FROM UserBalance ub WHERE ub.userId = :userId")

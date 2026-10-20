@@ -182,40 +182,30 @@ public class UserServiceTest {
     }
 
     @Test
-    void carPurchase_shouldReturnFalse_whenBuyerDoesNotHaveEnoughAmountInBalance() {
-        BigDecimal testAmount =  new BigDecimal("228.21");
-        long buyerId = 1L;
-        long sellerId = 2L;
-        when(userBalanceRepository.minusBalanceIfSufficient(anyLong(), any(BigDecimal.class))).thenReturn(0);
-
-        boolean result = userService.carPurchase(buyerId, sellerId, testAmount);
-
-        assertThat(result).isFalse();
-        verify(userBalanceRepository, never()).plusBalance(anyLong(), any());
-    }
-
-    @Test
     void carPurchase_shouldThrownException_whenSellerDoesNotExists() {
         BigDecimal testAmount =  new BigDecimal("228.21");
+        BigDecimal buyerBalance = new BigDecimal("228.21");
+        BigDecimal sellerBalance =  new BigDecimal("228.21");
         long buyerId = 1L;
         long sellerId = 2L;
-        when(userBalanceRepository.minusBalanceIfSufficient(anyLong(), any(BigDecimal.class))).thenReturn(1);
-        when(userBalanceRepository.plusBalance(anyLong(), any(BigDecimal.class)))
-                .thenThrow(new UserNotFoundException("User not found"));
+        when(userBalanceRepository.updateBalance(eq(buyerId), any(BigDecimal.class))).thenReturn(1);
+        when(userBalanceRepository.updateBalance(eq(sellerId), any(BigDecimal.class))).thenReturn(0);
 
-        assertThatThrownBy(() -> userService.carPurchase(buyerId, sellerId, testAmount))
+        assertThatThrownBy(() -> userService.carPurchase(buyerId, sellerId, buyerBalance, sellerBalance, testAmount))
                 .isInstanceOf(UserNotFoundException.class);
     }
 
     @Test
     void carPurchase_shouldReturnTrue_whenBuyerHasEnoughAmountInBalanceAndSellerExists() {
         BigDecimal testAmount =  new BigDecimal("228.21");
+        BigDecimal buyerBalance = new BigDecimal("228.21");
+        BigDecimal sellerBalance =  new BigDecimal("228.21");
         long buyerId = 1L;
         long sellerId = 2L;
-        when(userBalanceRepository.minusBalanceIfSufficient(anyLong(), any(BigDecimal.class))).thenReturn(1);
-        when(userBalanceRepository.plusBalance(anyLong(), any(BigDecimal.class))).thenReturn(1);
+        when(userBalanceRepository.updateBalance(eq(buyerId), any(BigDecimal.class))).thenReturn(1);
+        when(userBalanceRepository.updateBalance(eq(sellerId), any(BigDecimal.class))).thenReturn(1);
 
-        boolean result = userService.carPurchase(buyerId, sellerId, testAmount);
+        boolean result = userService.carPurchase(buyerId, sellerId, buyerBalance, sellerBalance, testAmount);
 
         assertThat(result).isTrue();
     }

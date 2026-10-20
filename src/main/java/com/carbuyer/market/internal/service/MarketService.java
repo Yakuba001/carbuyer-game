@@ -74,47 +74,56 @@ public class MarketService {
     }
 
     @Transactional
-    public void buyCar(Long userId, UUID listingId) {
-        if (listingId == null || userId == null) {
-            throw new MissedDataException("ListingId and userId are required: " + listingId + ", " + userId);
+    public void buyCar(Long buyerId, UUID listingId) {
+        if (listingId == null || buyerId == null) {
+            throw new MissedDataException("ListingId and userId are required: " + listingId + ", " + buyerId);
         }
-        if (!userFacade.existsById(userId)) {
-            throw new UserNotFoundException("User with id: " + userId + " not found");
+        if (!userFacade.existsById(buyerId)) {
+            throw new UserNotFoundException("User with id: " + buyerId + " not found");
         }
         MarketListing listing = repository.findByIdForUpdate(listingId)
                 .orElseThrow(() -> new ListingNotFoundException("Listing with id: " + listingId + " not found"));
-        BigDecimal userBalance = userFacade.getUserBalanceById(userId);
-        // TODO: set to sellerBalance pessimistic lock to avoid deadlock... or mb create method with double-locking to atomicity approach...
         if (listing.getStatus() != ListingStatus.ACTIVE) {
             throw new InactiveListingException("Listing with id: " + listingId + " is not active");
         }
-        if (userBalance.compareTo(listing.getPrice()) < 0) {
+        Long sellerId = listing.getSellerId();
+        Long firstIdForBlocking = Math.min(buyerId, sellerId);
+        Long secondIdForBlocking = Math.max(buyerId, sellerId);
+        BigDecimal buyerBalance, sellerBalance;
+        if (firstIdForBlocking.equals(buyerId)) {
+            buyerBalance = userFacade.getUserBalanceById(firstIdForBlocking);
+            sellerBalance = userFacade.getUserBalanceById(secondIdForBlocking);
+        } else {
+            sellerBalance = userFacade.getUserBalanceById(firstIdForBlocking);
+            buyerBalance = userFacade.getUserBalanceById(secondIdForBlocking);
+        }
+        if (buyerBalance.compareTo(listing.getPrice()) < 0) {
             throw new InsufficientFundsException("You don`t have enough funds");
         }
-        if (!garageFacade.isHasGarageSlotWithInputStatus(userId, EMPTY_GARAGE_SLOT)) {
-            throw new NoEmptySlotsException("You don`t have empty slots");
-        }
-
-
-        // TODO: solve this part of method to avoid deadlocks and race conditions...
-        Long ownerId = listing.getSellerId();
-        if (Objects.equals(ownerId, userId)) {
+        if (Objects.equals(sellerId, buyerId)) {
             throw new SelfBuyingException("You can`t buy your own car");
         }
-        if (!userFacade.carPurchase(userId, ownerId, listing.getPrice())) {
+        if (!garageFacade.isHasGarageSlotWithInputStatus(buyerId, EMPTY_GARAGE_SLOT)) {
+            throw new NoEmptySlotsException("You don`t have empty slots");
+        }
+        if (!userFacade.carPurchase(buyerId, sellerId, buyerBalance, sellerBalance, listing.getPrice())) {
             throw new InsufficientFundsException("Something went wrong");
         }
-        if (!carFacade.setNewCarOwner(ownerId, userId, listing.getCarId())) {
+
+
+        // TODO: THIS
+
+        if (!carFacade.setNewCarOwner(sellerId, buyerId, listing.getCarId())) {
             throw new ChangeCarOwnerException("Something went wrong");
         }
         if (!garageFacade.isChangedStatusFromEmptyToOccupiedAndSetCarId(
-                userId,
+                buyerId,
                 listing.getCarId(),
                 OCCUPIED_GARAGE_SLOT)) {
             throw new ChangeCarOwnerException("Something went wrong");
         }
         listing.setStatus(ListingStatus.SOLD);
-        listing.setBuyerId(userId);
+        listing.setBuyerId(buyerId);
         listing.setClosedAt(Instant.now());
     }
 }
