@@ -4,6 +4,11 @@ import java.util.UUID;
 
 public interface GarageFacade {
 
-    boolean isHasGarageSlotWithInputStatus(Long userId, String status);
-    boolean isChangedStatusFromEmptyToOccupiedAndSetCarId(Long userId, UUID carId, String status);
+    Long getGarageSlotIdWithEmptyStatus(Long userId, String status);
+
+    Long getSellerGarageSlotId(Long userId, UUID carId);
+
+    void isChangedStatusFromEmptyToOccupiedAndSetCarId(Long emptyGarageSlotId,
+                                                       Long sellerGarageSlotId,
+                                                       UUID carId);
 }

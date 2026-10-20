@@ -14,12 +14,23 @@ class GarageFacadeImpl implements GarageFacade {
     private final GarageService service;
 
     @Override
-    public boolean isHasGarageSlotWithInputStatus(Long userId, String status) {
-        return service.isHasGarageSlotWithInputStatus(userId, status);
+    public Long getGarageSlotIdWithEmptyStatus(Long userId, String status) {
+        return service.getGarageSlotIdWithEmptyStatus(userId, status);
     }
 
     @Override
-    public boolean isChangedStatusFromEmptyToOccupiedAndSetCarId(Long userId, UUID carId, String status) {
-        return service.isChangedStatusFromEmptyToOccupiedAndSetCarId(userId, carId, status);
+    public Long getSellerGarageSlotId(Long userId, UUID carId) {
+        return service.getSellerGarageSlotId(userId, carId);
     }
+
+    @Override
+    public void isChangedStatusFromEmptyToOccupiedAndSetCarId(Long emptyGarageSlotId,
+                                                              Long sellerGarageSlotId,
+                                                              UUID carId) {
+        service.isChangedStatusFromEmptyToOccupiedAndSetCarId(
+                emptyGarageSlotId,
+                sellerGarageSlotId,
+                carId);
+    }
+
 }

@@ -30,7 +30,6 @@ public class MarketService {
     private final GarageFacade garageFacade;
 
     private static final String EMPTY_GARAGE_SLOT = "EMPTY";
-    private static final String OCCUPIED_GARAGE_SLOT = "OCCUPIED";
 
     @Transactional
     public MarketListingResponseDto createListing(Long sellerId, CreateListingRequestDto request) {
@@ -86,16 +85,25 @@ public class MarketService {
         if (listing.getStatus() != ListingStatus.ACTIVE) {
             throw new InactiveListingException("Listing with id: " + listingId + " is not active");
         }
+        UUID carId = listing.getCarId();
         Long sellerId = listing.getSellerId();
+        if (!carFacade.isCarOwner(carId, sellerId)) {
+            throw new NotCarOwnerException("This seller: " + sellerId + " is not owner");
+        }
         Long firstIdForBlocking = Math.min(buyerId, sellerId);
         Long secondIdForBlocking = Math.max(buyerId, sellerId);
         BigDecimal buyerBalance, sellerBalance;
+        Long emptyGarageSlotId, sellerGarageSlotId;
         if (firstIdForBlocking.equals(buyerId)) {
             buyerBalance = userFacade.getUserBalanceById(firstIdForBlocking);
+            emptyGarageSlotId = garageFacade.getGarageSlotIdWithEmptyStatus(buyerId, EMPTY_GARAGE_SLOT);
             sellerBalance = userFacade.getUserBalanceById(secondIdForBlocking);
+            sellerGarageSlotId = garageFacade.getSellerGarageSlotId(sellerId, carId);
         } else {
             sellerBalance = userFacade.getUserBalanceById(firstIdForBlocking);
+            sellerGarageSlotId = garageFacade.getSellerGarageSlotId(sellerId, carId);
             buyerBalance = userFacade.getUserBalanceById(secondIdForBlocking);
+            emptyGarageSlotId = garageFacade.getGarageSlotIdWithEmptyStatus(buyerId, EMPTY_GARAGE_SLOT);
         }
         if (buyerBalance.compareTo(listing.getPrice()) < 0) {
             throw new InsufficientFundsException("You don`t have enough funds");
@@ -103,25 +111,13 @@ public class MarketService {
         if (Objects.equals(sellerId, buyerId)) {
             throw new SelfBuyingException("You can`t buy your own car");
         }
-        if (!garageFacade.isHasGarageSlotWithInputStatus(buyerId, EMPTY_GARAGE_SLOT)) {
-            throw new NoEmptySlotsException("You don`t have empty slots");
-        }
         if (!userFacade.carPurchase(buyerId, sellerId, buyerBalance, sellerBalance, listing.getPrice())) {
             throw new InsufficientFundsException("Something went wrong");
         }
-
-
-        // TODO: THIS
-
-        if (!carFacade.setNewCarOwner(sellerId, buyerId, listing.getCarId())) {
+        if (!carFacade.setNewCarOwner(sellerId, buyerId, carId)) {
             throw new ChangeCarOwnerException("Something went wrong");
         }
-        if (!garageFacade.isChangedStatusFromEmptyToOccupiedAndSetCarId(
-                buyerId,
-                listing.getCarId(),
-                OCCUPIED_GARAGE_SLOT)) {
-            throw new ChangeCarOwnerException("Something went wrong");
-        }
+        garageFacade.isChangedStatusFromEmptyToOccupiedAndSetCarId(emptyGarageSlotId, sellerGarageSlotId, carId);
         listing.setStatus(ListingStatus.SOLD);
         listing.setBuyerId(buyerId);
         listing.setClosedAt(Instant.now());
