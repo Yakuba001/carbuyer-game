@@ -17,7 +17,7 @@ public class CarService {
     private final CarRepository carRepository;
 
     public boolean isCarOwner(UUID carId, Long sellerId) {
-        Car car = carRepository.findById(carId)
+        Car car = carRepository.findForUpdateById(carId)
                 .orElseThrow(() -> new CarNotFoundException("Car with this id: " + carId + " does not exists"));
         Long ownerId = car.getOwnerId();
         if (sellerId == null || ownerId == null) {

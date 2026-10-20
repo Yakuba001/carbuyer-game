@@ -54,7 +54,10 @@ public class UserFacadeImpl implements UserFacade {
     }
 
     @Override
-    public boolean carPurchase(Long userId, Long sellerId, BigDecimal amount) {
-        return service.carPurchase(userId, sellerId, amount);
+    public boolean carPurchase(Long userId, Long sellerId,
+                               BigDecimal buyerBalance,
+                               BigDecimal sellerBalance,
+                               BigDecimal amount) {
+        return service.carPurchase(userId, sellerId, buyerBalance, sellerBalance, amount);
     }
 }

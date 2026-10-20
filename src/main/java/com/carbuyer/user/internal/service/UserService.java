@@ -93,14 +93,21 @@ public class UserService {
     }
 
     @Transactional
-    public boolean carPurchase(Long buyerId, Long sellerId, BigDecimal amount) {
-        int rowsDebited = userBalanceRepository.minusBalanceIfSufficient(buyerId, amount);
+    public boolean carPurchase(Long buyerId,
+                               Long sellerId,
+                               BigDecimal buyerBalance,
+                               BigDecimal sellerBalance,
+                               BigDecimal amount) {
+
+        BigDecimal newBuyerBalance = buyerBalance.subtract(amount);
+        BigDecimal newSellerBalance = sellerBalance.add(amount);
+        int rowsDebited = userBalanceRepository.updateBalance(buyerId, newBuyerBalance);
         if (rowsDebited == 0) {
             return false;
         }
-        int rowsCredited = userBalanceRepository.plusBalance(sellerId, amount);
+        int rowsCredited = userBalanceRepository.updateBalance(sellerId, newSellerBalance);
         if (rowsCredited == 0) {
-            throw new UserNotFoundException("User with this id: " + buyerId + " does not exists");
+            throw new UserNotFoundException("User with this id: " + sellerId + " does not exists");
         }
         return true;
     }

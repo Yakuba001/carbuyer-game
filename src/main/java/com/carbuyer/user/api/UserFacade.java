@@ -13,5 +13,9 @@ public interface UserFacade {
     Long findIdByUsername(String username);
     boolean existsById(Long id);
     BigDecimal getUserBalanceById(Long id);
-    boolean carPurchase(Long buyerId, Long sellerId, BigDecimal amount);
+    boolean carPurchase(Long buyerId,
+                        Long sellerId,
+                        BigDecimal buyerBalance,
+                        BigDecimal sellerBalance,
+                        BigDecimal amount);
 }

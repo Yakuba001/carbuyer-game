@@ -46,45 +46,28 @@ public class UserBalanceRepositoryIT extends DataJpaIntegrationTest {
     }
 
     @Test
-    void minusBalanceIfSufficient_shouldReturnZero_whenUserDoesNotHaveEnoughBalance() {
+    void updateBalance_shouldReturnOne_whenUserBalanceChanged() {
         long userId = 1L;
-        BigDecimal balance = new BigDecimal("123.32");
-        BigDecimal price = new BigDecimal("222.33");
-        addUserAndHisBalanceToDb(userId, balance);
+        BigDecimal buyerBalance = new BigDecimal("228.21");
+        BigDecimal newBuyerBalance = new BigDecimal("118.22");
+        addUserAndHisBalanceToDb(userId, buyerBalance);
 
-        int result = userBalanceRepository.minusBalanceIfSufficient(userId, price);
+        int result = userBalanceRepository.updateBalance(userId, newBuyerBalance);
+
+        UserBalance buyerBal = userBalanceRepository.findById(userId).orElseThrow();
+
+        assertThat(result).isEqualTo(1);
+        assertThat(buyerBal.getBalance()).isEqualTo(newBuyerBalance);
+    }
+
+    @Test
+    void updateBalance_shouldReturnZero_whenUserBalanceNotChanged() {
+        long userId = 1L;
+        BigDecimal buyerBalance = new BigDecimal("228.21");
+
+        int result = userBalanceRepository.updateBalance(userId, buyerBalance);
 
         assertThat(result).isEqualTo(0);
-    }
-
-    @Test
-    void minusBalanceIfSufficient_shouldReturnOneAndSetUserBalanceMinusPrice_whenUserHasEnoughBalance() {
-        long userId = 1L;
-        BigDecimal balance = new BigDecimal("123.32");
-        BigDecimal price = new BigDecimal("22.33");
-        BigDecimal expectedPrice = balance.subtract(price);
-        addUserAndHisBalanceToDb(userId, balance);
-
-        int result = userBalanceRepository.minusBalanceIfSufficient(userId, price);
-        UserBalance userBalance = userBalanceRepository.findById(userId).orElseThrow();
-
-        assertThat(result).isEqualTo(1);
-        assertThat(userBalance.getBalance()).isEqualTo(expectedPrice);
-    }
-
-    @Test
-    void plusBalance_shouldReturnOneAndSetUserBalancePlusPrice() {
-        long userId = 1L;
-        BigDecimal balance = new BigDecimal("123.32");
-        BigDecimal price = new BigDecimal("22.33");
-        BigDecimal expectedPrice = balance.add(price);
-        addUserAndHisBalanceToDb(userId, balance);
-
-        int result = userBalanceRepository.plusBalance(userId, price);
-        UserBalance userBalance = userBalanceRepository.findById(userId).orElseThrow();
-
-        assertThat(result).isEqualTo(1);
-        assertThat(userBalance.getBalance()).isEqualTo(expectedPrice);
     }
 
     @Test
@@ -105,7 +88,7 @@ public class UserBalanceRepositoryIT extends DataJpaIntegrationTest {
                 futures.add(CompletableFuture.supplyAsync(() -> {
                     try {
                         startLatch.await();
-                        return testService.updateUserBalanceWithDelay(userId, oldBalance, newBalance, delayMs);
+                        return testService.findUserBalanceAndUpdateWithDelay(userId, oldBalance, newBalance, delayMs);
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
                         throw new RuntimeException(e);
@@ -131,7 +114,7 @@ public class UserBalanceRepositoryIT extends DataJpaIntegrationTest {
         private UserBalanceRepository userBalanceRepository;
 
         @Transactional(propagation = Propagation.REQUIRES_NEW)
-        public boolean updateUserBalanceWithDelay(Long userId, BigDecimal oldBalance, BigDecimal newBalance, long delay) {
+        public boolean findUserBalanceAndUpdateWithDelay(Long userId, BigDecimal oldBalance, BigDecimal newBalance, long delay) {
             UserBalance userBalance = userBalanceRepository.findBalanceByUserId(userId)
                     .orElseThrow(() -> new IllegalArgumentException("UserBalance not found"));
             if (userBalance.getBalance().compareTo(oldBalance) != 0) {
