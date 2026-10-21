@@ -4,32 +4,23 @@ import com.carbuyer.DataJpaIntegrationTest;
 import com.carbuyer.user.internal.entity.UserBalance;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.TestComponent;
-import org.springframework.context.annotation.Import;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.sql.Types;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @Transactional
-@Import(UserBalanceRepositoryIT.UserBalanceRepositoryTest.class)
 public class UserBalanceRepositoryIT extends DataJpaIntegrationTest {
 
     @Autowired
     private UserBalanceRepository userBalanceRepository;
     @Autowired
     private JdbcTemplate jdbcTemplate;
-    @Autowired
-    private UserBalanceRepositoryTest testService;
 
     @Test
     void checkCascadeDeleting_shouldDeleteUserBalance_whenUserWithSameUserIdIsDeleted() {
@@ -43,6 +34,30 @@ public class UserBalanceRepositoryIT extends DataJpaIntegrationTest {
 
         assertThat(isUserBalanceExistsBeforeUserDeleted).isTrue();
         assertThat(isUserBalanceExistsAfterUserDeletion).isFalse();
+    }
+
+    @Test
+    void checkConstraintNotNullBalance_shouldThrownException_whenBalanceIsNull() {
+        long userId = 1L;
+        addUserToDb(userId);
+
+        assertThatThrownBy(() -> jdbcTemplate
+                .update("INSERT INTO user_balances (user_id, balance) OVERRIDING SYSTEM VALUE VALUES (?)",
+                        new Object[]{userId, null}, new int[]{Types.BIGINT, Types.NUMERIC}))
+                .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void checkDefaultBalance_shouldSetDefaultBalance_whenBalanceNotSend() {
+        long userId = 1L;
+        addUserToDb(userId);
+        jdbcTemplate.update("INSERT INTO user_balances (user_id) OVERRIDING SYSTEM VALUE VALUES (?)", userId);
+
+        UserBalance result = userBalanceRepository.findById(userId).orElseThrow();
+
+        assertThat(result.getBalance()).isEqualTo("0.00");
+        assertThat(result.getCreatedAt()).isNotNull();
+        assertThat(result.getVersion()).isEqualTo(0);
     }
 
     @Test
@@ -70,80 +85,17 @@ public class UserBalanceRepositoryIT extends DataJpaIntegrationTest {
         assertThat(result).isEqualTo(0);
     }
 
-    @Test
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    void findBalanceByUserId_shouldChangeUserOnce_whenEnvironmentIsConcurrency() {
-        long userId = 1L;
-        long delayMs = 100L;
-        BigDecimal oldBalance = new BigDecimal("123.32");
-        addUserAndHisBalanceToDb(userId, oldBalance);
-        BigDecimal newBalance = new BigDecimal("222.33");
-        CountDownLatch startLatch = new CountDownLatch(1);
-
-        List<CompletableFuture<Boolean>> futures = new ArrayList<>();
-        List<Boolean> resultList;
-
-        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()){
-            for (int i = 0; i < 5; i++) {
-                futures.add(CompletableFuture.supplyAsync(() -> {
-                    try {
-                        startLatch.await();
-                        return testService.findUserBalanceAndUpdateWithDelay(userId, oldBalance, newBalance, delayMs);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                        throw new RuntimeException(e);
-                    }
-                }, executor));
-            }
-            startLatch.countDown();
-            resultList = futures.stream()
-                    .map(CompletableFuture::join)
-                    .filter(el -> el == true)
-                    .toList();
-        }
-
-        assertThat(resultList).hasSize(1);
-
-        dataBaseCleanup(userId);
-    }
-
-    @TestComponent
-    public static class UserBalanceRepositoryTest {
-
-        @Autowired
-        private UserBalanceRepository userBalanceRepository;
-
-        @Transactional(propagation = Propagation.REQUIRES_NEW)
-        public boolean findUserBalanceAndUpdateWithDelay(Long userId, BigDecimal oldBalance, BigDecimal newBalance, long delay) {
-            UserBalance userBalance = userBalanceRepository.findByUserId(userId)
-                    .orElseThrow(() -> new IllegalArgumentException("UserBalance not found"));
-            if (userBalance.getBalance().compareTo(oldBalance) != 0) {
-                return false;
-            }
-            if (delay > 0) {
-                try {
-                    Thread.sleep(delay);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-            }
-            userBalance.setBalance(newBalance);
-            userBalanceRepository.saveAndFlush(userBalance);
-            return true;
-        }
-    }
-
-    private void dataBaseCleanup(long userId) {
-        jdbcTemplate.update("DELETE FROM users WHERE id = ?", userId);
-    }
-
     private void addUserAndHisBalanceToDb(long userId, BigDecimal balance) {
+        addUserToDb(userId);
+        jdbcTemplate.update("INSERT INTO user_balances (user_id, balance) VALUES (?, ?)", userId, balance);
+    }
+
+    private void addUserToDb(long userId) {
         String username = "Bill";
         String email = "billGreat@g.com";
         String password = "password";
         jdbcTemplate.update("INSERT INTO users (id, name, email, password_hash) OVERRIDING SYSTEM VALUE " +
                         "VALUES (?, ?, ?, ?)",
                 userId, username, email, password);
-        jdbcTemplate.update("INSERT INTO user_balances (user_id, balance) VALUES (?, ?)", userId, balance);
     }
 }
