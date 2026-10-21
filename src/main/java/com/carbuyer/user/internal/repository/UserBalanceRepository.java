@@ -18,6 +18,5 @@ public interface UserBalanceRepository extends JpaRepository<UserBalance, Long> 
     int updateBalance(@Param("userId") Long userId, @Param("newBalance") BigDecimal newBalance);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT ub FROM UserBalance ub WHERE ub.userId = :userId")
-    Optional<UserBalance> findBalanceByUserId(@Param("userId") Long userId);
+    Optional<UserBalance> findByUserId(Long userId);
 }

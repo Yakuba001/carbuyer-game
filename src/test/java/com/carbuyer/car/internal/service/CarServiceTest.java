@@ -25,69 +25,67 @@ public class CarServiceTest {
     @InjectMocks
     private CarService service;
 
-    // TODO: work here...............
+    @Test
+    void isCarOwner_shouldReturnTrue_whenCarExistsOwnerAndSellerIdNotNullAndThisIdsTheSame() {
+        UUID carId = UUID.randomUUID();
+        Long ownerId = 1L;
+        Long sellerId = 1L;
+        Car exampleCar =
+                new Car("228", "Opel", 100, 50, new BigDecimal("200"), ownerId);
+        when(carRepository.findForUpdateById(carId)).thenReturn(Optional.of(exampleCar));
 
-//    @Test
-//    void isCarOwner_shouldReturnTrue_whenCarExistsOwnerAndSellerIdNotNullAndThisIdsTheSame() {
-//        UUID carId = UUID.randomUUID();
-//        Long ownerId = 1L;
-//        Long sellerId = 1L;
-//        Car exampleCar =
-//                new Car("228", "Opel", 100, 50, new BigDecimal("200"), ownerId);
-//        when(carRepository.findById(carId)).thenReturn(Optional.of(exampleCar));
-//
-//        boolean result = service.isCarOwner(carId, sellerId);
-//
-//        assertThat(result).isTrue();
-//    }
-//
-//    @Test
-//    void isCarOwner_shouldThrowIllegalArgumentException_whenCarDoesNotExist() {
-//        UUID carId = UUID.randomUUID();
-//        Long sellerId = 1L;
-//        assertThatThrownBy(() -> service.isCarOwner(carId, sellerId))
-//                .isInstanceOf(CarNotFoundException.class);
-//    }
-//
-//    @Test
-//    void isCarOwner_shouldReturnFalse_whenSellerIdIsNull() {
-//        UUID carId = UUID.randomUUID();
-//        Long ownerId = 1L;
-//        Car exampleCar =
-//                new Car("228", "Opel", 100, 50, new BigDecimal("200"), ownerId);
-//        when(carRepository.findById(carId)).thenReturn(Optional.of(exampleCar));
-//
-//        boolean result = service.isCarOwner(carId, null);
-//
-//        assertThat(result).isFalse();
-//    }
-//
-//    @Test
-//    void isCarOwner_shouldReturnFalse_whenOwnerIdIsNull() {
-//        UUID carId = UUID.randomUUID();
-//        Long sellerId = 1L;
-//        Car exampleCar =
-//                new Car("228", "Opel", 100, 50, new BigDecimal("200"), null);
-//        when(carRepository.findById(carId)).thenReturn(Optional.of(exampleCar));
-//
-//        boolean result = service.isCarOwner(carId, sellerId);
-//
-//        assertThat(result).isFalse();
-//    }
-//
-//    @Test
-//    void isCarOwner_shouldReturnFalse_whenSellerIdIsNotEqualOwnerId() {
-//        UUID carId = UUID.randomUUID();
-//        Long sellerId = 1L;
-//        Long ownerId = 2L;
-//        Car exampleCar =
-//                new Car("228", "Opel", 100, 50, new BigDecimal("200"), ownerId);
-//        when(carRepository.findById(carId)).thenReturn(Optional.of(exampleCar));
-//
-//        boolean result = service.isCarOwner(carId, sellerId);
-//
-//        assertThat(result).isFalse();
-//    }
+        boolean result = service.isCarOwner(carId, sellerId);
+
+        assertThat(result).isTrue();
+    }
+
+    @Test
+    void isCarOwner_shouldThrowCarNotFoundException_whenCarDoesNotExist() {
+        UUID carId = UUID.randomUUID();
+        Long sellerId = 1L;
+        assertThatThrownBy(() -> service.isCarOwner(carId, sellerId))
+                .isInstanceOf(CarNotFoundException.class);
+    }
+
+    @Test
+    void isCarOwner_shouldReturnFalse_whenSellerIdIsNull() {
+        UUID carId = UUID.randomUUID();
+        Long ownerId = 1L;
+        Car exampleCar =
+                new Car("228", "Opel", 100, 50, new BigDecimal("200"), ownerId);
+        when(carRepository.findForUpdateById(carId)).thenReturn(Optional.of(exampleCar));
+
+        boolean result = service.isCarOwner(carId, null);
+
+        assertThat(result).isFalse();
+    }
+
+    @Test
+    void isCarOwner_shouldReturnFalse_whenOwnerIdIsNull() {
+        UUID carId = UUID.randomUUID();
+        Long sellerId = 1L;
+        Car exampleCar =
+                new Car("228", "Opel", 100, 50, new BigDecimal("200"), null);
+        when(carRepository.findForUpdateById(carId)).thenReturn(Optional.of(exampleCar));
+
+        boolean result = service.isCarOwner(carId, sellerId);
+
+        assertThat(result).isFalse();
+    }
+
+    @Test
+    void isCarOwner_shouldReturnFalse_whenSellerIdIsNotEqualOwnerId() {
+        UUID carId = UUID.randomUUID();
+        Long sellerId = 1L;
+        Long ownerId = 2L;
+        Car exampleCar =
+                new Car("228", "Opel", 100, 50, new BigDecimal("200"), ownerId);
+        when(carRepository.findForUpdateById(carId)).thenReturn(Optional.of(exampleCar));
+
+        boolean result = service.isCarOwner(carId, sellerId);
+
+        assertThat(result).isFalse();
+    }
 
     @Test
     void changeCarOwner_shouldReturnFalse_whenRepositoryReturnZero() {

@@ -173,7 +173,7 @@ public class UserServiceTest {
         long id = 1L;
         BigDecimal balance = new BigDecimal("228.21");
         UserBalance testUserBalance = new UserBalance(balance);
-        when(userBalanceRepository.findBalanceByUserId(id)).thenReturn(Optional.of(testUserBalance));
+        when(userBalanceRepository.findByUserId(id)).thenReturn(Optional.of(testUserBalance));
 
         BigDecimal result = userService.getUserBalanceById(id);
 

@@ -33,9 +33,9 @@ public class GarageService {
     }
 
     @Transactional
-    public void isChangedStatusFromEmptyToOccupiedAndSetCarId(Long emptyGarageSlotId,
-                                                              Long sellerGarageSlotId,
-                                                              UUID carId) {
+    public void garageSlotStatusesAndCarIdInItChanger(Long emptyGarageSlotId,
+                                                      Long sellerGarageSlotId,
+                                                      UUID carId) {
         GarageSlot buyerGarageSlot = repository.findById(emptyGarageSlotId)
                 .orElseThrow(() ->
                         new GarageSlotNotFoundException("Garage slot with id " + emptyGarageSlotId + " not found"));

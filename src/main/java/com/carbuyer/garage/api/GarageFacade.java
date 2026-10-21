@@ -8,7 +8,7 @@ public interface GarageFacade {
 
     Long getSellerGarageSlotId(Long userId, UUID carId);
 
-    void isChangedStatusFromEmptyToOccupiedAndSetCarId(Long emptyGarageSlotId,
-                                                       Long sellerGarageSlotId,
-                                                       UUID carId);
+    void changeGarageSlotStatusesAndIdInIt(Long emptyGarageSlotId,
+                                           Long sellerGarageSlotId,
+                                           UUID carId);
 }

@@ -117,7 +117,7 @@ public class MarketService {
         if (!carFacade.setNewCarOwner(sellerId, buyerId, carId)) {
             throw new ChangeCarOwnerException("Something went wrong");
         }
-        garageFacade.isChangedStatusFromEmptyToOccupiedAndSetCarId(emptyGarageSlotId, sellerGarageSlotId, carId);
+        garageFacade.changeGarageSlotStatusesAndIdInIt(emptyGarageSlotId, sellerGarageSlotId, carId);
         listing.setStatus(ListingStatus.SOLD);
         listing.setBuyerId(buyerId);
         listing.setClosedAt(Instant.now());

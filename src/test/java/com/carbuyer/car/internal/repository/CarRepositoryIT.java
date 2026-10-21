@@ -11,6 +11,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -88,6 +90,25 @@ public class CarRepositoryIT extends DataJpaIntegrationTest {
     }
 
     @Test
+    void checkDefaultValues_shouldSetDefaultValues_whenUserDidNotSendAmounts() {
+        long userId = 1L;
+        addUserToDb(userId);
+        String randomVin1 = UUID.randomUUID().toString().replace("-", "").substring(0, 17);
+        String model = "Opel";
+        int conditionScore = 85;
+        jdbcTemplate.update("INSERT INTO cars (vin, model, condition_score, owner_id) VALUES (?, ?, ?, ?)",
+                randomVin1, model, conditionScore, userId);
+
+        List<Car> saveCarList = carRepository.findAll();
+        Car savedCar = saveCarList.stream().findFirst().orElseThrow();
+
+        assertThat(savedCar.getId()).isNotNull();
+        assertThat(savedCar.getMileage()).isEqualTo(0);
+        assertThat(savedCar.getRealPrice()).isEqualTo("0.00");
+        assertThat(savedCar.getCreatedAt()).isNotNull();
+    }
+
+    @Test
     void setNewCarOwner_shouldReturnZero_whenCarCantChangedHisOwner() {
         long userId = 1L;
         long anotherOwnerId = 2L;
@@ -121,6 +142,25 @@ public class CarRepositoryIT extends DataJpaIntegrationTest {
         assertThat(result).isEqualTo(1);
         assertThat(currentOwnerId).isEqualTo(ownerId);
         assertThat(newOwnerId).isEqualTo(buyerId);
+    }
+
+    @Test
+    void findForUpdateById_shouldReturnCar_whenCarExists() {
+        long userId = 1L;
+        addUserToDb(userId);
+        UUID carId = addTestCorrectCarToDb(userId);
+
+        Car savedCar = carRepository.findForUpdateById(carId).orElseThrow();
+
+        assertThat(savedCar.getId()).isEqualTo(carId);
+    }
+
+    @Test
+    void findForUpdateById_shouldThrownNoSuchElementException_whenCarDoesNotExist() {
+        UUID carId = UUID.randomUUID();
+
+        assertThatThrownBy(() -> carRepository.findForUpdateById(carId).orElseThrow())
+                .isInstanceOf(NoSuchElementException.class);
     }
 
     private UUID addTestCorrectCarToDb(long userId) {

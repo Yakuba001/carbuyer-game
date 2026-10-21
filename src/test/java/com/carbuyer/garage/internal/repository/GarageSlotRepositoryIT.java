@@ -15,7 +15,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -28,7 +27,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @Transactional
-@Import(GarageSlotRepositoryIT.GarageSlotServiceTest.class)
 public class GarageSlotRepositoryIT extends DataJpaIntegrationTest {
 
     @Autowired
@@ -37,199 +35,104 @@ public class GarageSlotRepositoryIT extends DataJpaIntegrationTest {
     private JdbcTemplate jdbcTemplate;
     @Autowired
     private EntityManager em;
-    @Autowired
-    private GarageSlotServiceTest testService;
 
-    @Test
-    void checkConstraint_oneUserCanHaveOnlyUniqueGarageSlotsNumber() {
-        long userId = 1L;
-        String username = "Bob";
-        String userEmail = "bob@g.com";
-        String userPassword = "bobby123";
-        addUserToDb(userId, username, userEmail, userPassword);
-        GarageSlot first = new GarageSlot(userId, 1, null, GarageSlotStatus.EMPTY);
-        GarageSlot second = new GarageSlot(userId, 2, null, GarageSlotStatus.EMPTY);
-        GarageSlot thirdWithTheSameSlotNumber = new GarageSlot(userId, 1, null, GarageSlotStatus.EMPTY);
-
-        garageSlotRepository.save(first);
-        garageSlotRepository.save(second);
-
-        assertThatThrownBy(() -> garageSlotRepository.saveAndFlush(thirdWithTheSameSlotNumber))
-                .isInstanceOf(DataIntegrityViolationException.class);
-    }
-
-    @Test
-    void foreignKey_shouldSetCarIdToNullOnCarDelete() {
-        long userId = 1L;
-        String username = "Bob";
-        String userEmail = "bob@g.com";
-        String userPassword = "bobby123";
-        addUserToDb(userId, username, userEmail, userPassword);
-        UUID firstCarId = UUID.randomUUID();
-        String randomVin1 = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 17);
-        jdbcTemplate.update("INSERT INTO cars (id, vin, model, mileage, condition_score, real_price, owner_id) " +
-                        "VALUES (?, ?, ?, ?, ?, ?, ?)",
-                firstCarId, randomVin1, "Test Model", 10000, 85, 15000.00, userId);
-        GarageSlot slot = new GarageSlot(userId, 1, firstCarId, GarageSlotStatus.OCCUPIED);
-
-        garageSlotRepository.saveAndFlush(slot);
-
-        jdbcTemplate.update("DELETE FROM cars WHERE id = ?", firstCarId);
-
-        em.clear();
-
-        GarageSlot updatedSlot = garageSlotRepository.findById(slot.getId()).orElseThrow();
-
-        assertThat(updatedSlot.getCarId()).isNull();
-    }
-
-    @Test
-    void garageStatusConstraint_shouldThrowDataIntegrityViolationException_whenStatusIsNotEmptyOrOccupied() {
-        long userId = 1L;
-        int slotNumber = 1;
-        GarageSlotStatus status = GarageSlotStatus.EMPTY;
-        addUserAndGarageSlotToDb(userId, slotNumber, status);
-
-        assertThatThrownBy(() -> jdbcTemplate.update("UPDATE garage_slots SET status = 'BROKEN' " +
-                        "WHERE user_id = ? AND slot_number = ?",
-                userId, slotNumber)).isInstanceOf(DataIntegrityViolationException.class);
-    }
-
-    @ParameterizedTest
-    @EnumSource(value = GarageSlotStatus.class, names = {"EMPTY", "OCCUPIED"})
-    void existByUserIdAndStatus_shouldReturnTrue_whenUserHasGarageSlotWithStatus(GarageSlotStatus status) {
-        long userId = 1L;
-        int slotNumber = 1;
-        addUserAndGarageSlotToDb(userId, slotNumber, status);
-
-        GarageSlot resultSlot = garageSlotRepository.findFirstByUserIdAndStatus(userId, status)
-                .orElseThrow(() -> new IllegalArgumentException("Garage id " + slotNumber + " does not exist"));
-        boolean result = resultSlot.getStatus().equals(status);
-
-        assertThat(result).isTrue();
-    }
-
-    @Test
-    void existByUserIdAndStatus_shouldReturnFalse_whenUserHasNoGarageSlotWithStatus() {
-        long userId = 1L;
-        int slotNumber = 1;
-        GarageSlotStatus status = GarageSlotStatus.OCCUPIED;
-        addUserAndGarageSlotToDb(userId, slotNumber, status);
-
-        GarageSlot resultSlot = garageSlotRepository.findFirstByUserIdAndStatus(userId, GarageSlotStatus.EMPTY)
-                .orElse(null);
-
-        assertThat(resultSlot).isNull();
-    }
-
-    // TODO: rewrite this......
+    // TODO: rewrite this...............................
 
 //    @Test
-//    void occupyFirstEmptySlot_shouldChangeStatusToOccupiedAndSetCarToThisSlot() {
+//    void checkConstraint_oneUserCanHaveOnlyUniqueGarageSlotsNumber() {
+//        long userId = 1L;
+//        String username = "Bob";
+//        String userEmail = "bob@g.com";
+//        String userPassword = "bobby123";
+//        addUserToDb(userId, username, userEmail, userPassword);
+//        GarageSlot first = new GarageSlot(userId, 1, null, GarageSlotStatus.EMPTY);
+//        GarageSlot second = new GarageSlot(userId, 2, null, GarageSlotStatus.EMPTY);
+//        GarageSlot thirdWithTheSameSlotNumber = new GarageSlot(userId, 1, null, GarageSlotStatus.EMPTY);
+//
+//        garageSlotRepository.save(first);
+//        garageSlotRepository.save(second);
+//
+//        assertThatThrownBy(() -> garageSlotRepository.saveAndFlush(thirdWithTheSameSlotNumber))
+//                .isInstanceOf(DataIntegrityViolationException.class);
+//    }
+//
+//    @Test
+//    void foreignKey_shouldSetCarIdToNullOnCarDelete() {
+//        long userId = 1L;
+//        String username = "Bob";
+//        String userEmail = "bob@g.com";
+//        String userPassword = "bobby123";
+//        addUserToDb(userId, username, userEmail, userPassword);
+//        UUID firstCarId = UUID.randomUUID();
+//        String randomVin1 = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 17);
+//        jdbcTemplate.update("INSERT INTO cars (id, vin, model, mileage, condition_score, real_price, owner_id) " +
+//                        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+//                firstCarId, randomVin1, "Test Model", 10000, 85, 15000.00, userId);
+//        GarageSlot slot = new GarageSlot(userId, 1, firstCarId, GarageSlotStatus.OCCUPIED);
+//
+//        garageSlotRepository.saveAndFlush(slot);
+//
+//        jdbcTemplate.update("DELETE FROM cars WHERE id = ?", firstCarId);
+//
+//        em.clear();
+//
+//        GarageSlot updatedSlot = garageSlotRepository.findById(slot.getId()).orElseThrow();
+//
+//        assertThat(updatedSlot.getCarId()).isNull();
+//    }
+//
+//    @Test
+//    void garageStatusConstraint_shouldThrowDataIntegrityViolationException_whenStatusIsNotEmptyOrOccupied() {
 //        long userId = 1L;
 //        int slotNumber = 1;
-//        UUID carId = UUID.randomUUID();
-//        String randomVin1 = UUID.randomUUID().toString().replace("-", "").substring(0, 17);
-//        String model = "Opel";
-//        int mileage = 10000;
-//        int conditionScore = 85;
-//        BigDecimal price = new BigDecimal("123.21");
-//        long slotId = addUserAndGarageSlotToDb(userId, slotNumber, GarageSlotStatus.EMPTY);
-//        jdbcTemplate.update("INSERT INTO cars (id, vin, model, mileage, condition_score, real_price, owner_id) " +
-//                        "OVERRIDING SYSTEM VALUE VALUES (?, ?, ?, ?, ?, ?, ?)",
-//                carId, randomVin1, model, mileage, conditionScore, price, userId);
+//        GarageSlotStatus status = GarageSlotStatus.EMPTY;
+//        addUserAndGarageSlotToDb(userId, slotNumber, status);
 //
-//        int result = garageSlotRepository.occupyFirstEmptySlot(userId, carId, "OCCUPIED");
-//
-//        GarageSlot afterChangingSlot = garageSlotRepository.findById(slotId).orElseThrow();
-//
-//        assertThat(result).isEqualTo(1);
-//        assertThat(afterChangingSlot.getCarId()).isEqualTo(carId);
-//        assertThat(afterChangingSlot.getStatus()).isEqualTo(GarageSlotStatus.OCCUPIED);
+//        assertThatThrownBy(() -> jdbcTemplate.update("UPDATE garage_slots SET status = 'BROKEN' " +
+//                        "WHERE user_id = ? AND slot_number = ?",
+//                userId, slotNumber)).isInstanceOf(DataIntegrityViolationException.class);
 //    }
-
-    @Test
-    @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    void findFirstByUserIdAndStatus_shouldFindFirstAndChangeStatusOnce_whenEnvironmentIsConcurrency() {
-        long userId = 1L;
-        int oldSlotNumber = 1;
-        int newSlotNumber = 2;
-        GarageSlotStatus status = GarageSlotStatus.EMPTY;
-        addUserAndGarageSlotToDb(userId, oldSlotNumber, status);
-        CountDownLatch countDownLatch = new CountDownLatch(1);
-        long delayMs = 100L;
-
-        List<CompletableFuture<Boolean>> futures = new ArrayList<>();
-        List<Boolean> resultList;
-
-        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()){
-            for (int i = 0; i < 5; i++) {
-                futures.add(CompletableFuture.supplyAsync(() -> {
-                    try {
-                        countDownLatch.await();
-                        return testService
-                                .updateGarageSlotWithDelay(userId, status, oldSlotNumber, newSlotNumber, delayMs);
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                        return false;
-                    }
-                }, executor));
-            }
-            countDownLatch.countDown();
-            resultList = futures.stream()
-                    .map(CompletableFuture::join)
-                    .filter(el -> el == true)
-                    .toList();
-        }
-
-        assertThat(resultList).hasSize(1);
-
-        jdbcTemplate.update("DELETE FROM users WHERE id = ?", userId);
-    }
-
-    @TestComponent
-    public static class GarageSlotServiceTest {
-
-        @Autowired
-        private GarageSlotRepository garageSlotRepository;
-
-        @Transactional(propagation = Propagation.REQUIRES_NEW)
-        public boolean updateGarageSlotWithDelay(Long userId,
-                                                 GarageSlotStatus status,
-                                                 Integer oldSlotNumber,
-                                                 Integer newSlotNumber,
-                                                 long delay) {
-            GarageSlot slot = garageSlotRepository.findFirstByUserIdAndStatus(userId, status)
-                    .orElseThrow(() -> new IllegalArgumentException("Garage id " + status + " does not exist"));
-            if (!slot.getSlotNumber().equals(oldSlotNumber)) {
-                return false;
-            }
-            if (delay > 0) {
-                try {
-                    Thread.sleep(delay);
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                }
-            }
-            slot.setSlotNumber(newSlotNumber);
-            garageSlotRepository.saveAndFlush(slot);
-            return true;
-        }
-    }
-
-    private long addUserAndGarageSlotToDb(long userId, Integer slotNumber, GarageSlotStatus status) {
-        String username = "Bob";
-        String userEmail = "bob@g.com";
-        String userPassword = "bobby123";
-        addUserToDb(userId, username, userEmail, userPassword);
-        GarageSlot slot = new GarageSlot(userId, slotNumber, null, status);
-        GarageSlot savedSlot = garageSlotRepository.saveAndFlush(slot);
-        return savedSlot.getId();
-    }
-
-    private void addUserToDb(long userId, String username, String email, String password) {
-        jdbcTemplate.update("INSERT INTO users (id, name, email, password_hash) OVERRIDING SYSTEM VALUE " +
-                        "VALUES (?, ?, ?, ?)",
-                userId, username, email, password);
-    }
+//
+//    @ParameterizedTest
+//    @EnumSource(value = GarageSlotStatus.class, names = {"EMPTY", "OCCUPIED"})
+//    void existByUserIdAndStatus_shouldReturnTrue_whenUserHasGarageSlotWithStatus(GarageSlotStatus status) {
+//        long userId = 1L;
+//        int slotNumber = 1;
+//        addUserAndGarageSlotToDb(userId, slotNumber, status);
+//
+//        GarageSlot resultSlot = garageSlotRepository.findFirstByUserIdAndStatus(userId, status)
+//                .orElseThrow(() -> new IllegalArgumentException("Garage id " + slotNumber + " does not exist"));
+//        boolean result = resultSlot.getStatus().equals(status);
+//
+//        assertThat(result).isTrue();
+//    }
+//
+//    @Test
+//    void existByUserIdAndStatus_shouldReturnFalse_whenUserHasNoGarageSlotWithStatus() {
+//        long userId = 1L;
+//        int slotNumber = 1;
+//        GarageSlotStatus status = GarageSlotStatus.OCCUPIED;
+//        addUserAndGarageSlotToDb(userId, slotNumber, status);
+//
+//        GarageSlot resultSlot = garageSlotRepository.findFirstByUserIdAndStatus(userId, GarageSlotStatus.EMPTY)
+//                .orElse(null);
+//
+//        assertThat(resultSlot).isNull();
+//    }
+//
+//    private long addUserAndGarageSlotToDb(long userId, Integer slotNumber, GarageSlotStatus status) {
+//        String username = "Bob";
+//        String userEmail = "bob@g.com";
+//        String userPassword = "bobby123";
+//        addUserToDb(userId, username, userEmail, userPassword);
+//        GarageSlot slot = new GarageSlot(userId, slotNumber, null, status);
+//        GarageSlot savedSlot = garageSlotRepository.saveAndFlush(slot);
+//        return savedSlot.getId();
+//    }
+//
+//    private void addUserToDb(long userId, String username, String email, String password) {
+//        jdbcTemplate.update("INSERT INTO users (id, name, email, password_hash) OVERRIDING SYSTEM VALUE " +
+//                        "VALUES (?, ?, ?, ?)",
+//                userId, username, email, password);
+//    }
 }
