@@ -3,11 +3,14 @@ package com.carbuyer.user.internal.repository;
 import com.carbuyer.DataJpaIntegrationTest;
 import com.carbuyer.user.internal.entity.User;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -18,20 +21,30 @@ public class UserRepositoryIT extends DataJpaIntegrationTest {
     @Autowired
     private UserRepository userRepository;
 
-    @Test
-    void checkUniqueNameField_shouldThrownDataViolationException_whenThisNameIsAlreadyExists() {
-        addUserToDb("test", "test", "test1");
-        User ununiqueUser = new User("test", "test1", "test2");
+    @ParameterizedTest
+    @MethodSource(value = "duplicateCheckerUsers")
+    void checkUniqueNameEmailFields_shouldThrownDataViolationException_whenFieldsUnUnique(User user) {
+        addUserToDb("test", "test", "test");
 
-        assertThatThrownBy(() -> userRepository.save(ununiqueUser)).isInstanceOf(DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> userRepository.save(user)).isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @ParameterizedTest
+    @MethodSource(value = "nullCheckerUsers")
+    void checkNotNullConstraints_shouldThrownDataViolationException_whenFieldsAreNull(User user) {
+        assertThatThrownBy(() -> userRepository.save(user)).isInstanceOf(DataIntegrityViolationException.class);
     }
 
     @Test
-    void checkUniqueEmailField_shouldThrownDataViolationException_whenThisEmailIsAlreadyExists() {
-        addUserToDb("test", "test", "test3");
-        User ununiqueUser = new User("test1", "test", "test4");
+    void checkDefaultsAmounts_shouldSetIdMaxSlotsVersionCreatedAt_whenUserAdded() {
+        User user = new User("test", "test", "test");
 
-        assertThatThrownBy(() -> userRepository.save(ununiqueUser)).isInstanceOf(DataIntegrityViolationException.class);
+        User savedUser = userRepository.save(user);
+
+        assertThat(savedUser.getId()).isNotNull();
+        assertThat(savedUser.getMaxSlots()).isEqualTo(1);
+        assertThat(savedUser.getVersion()).isEqualTo(0);
+        assertThat(savedUser.getCreatedAt()).isNotNull();
     }
 
     @Test
@@ -77,5 +90,20 @@ public class UserRepositoryIT extends DataJpaIntegrationTest {
     private void addUserToDb(String name, String email, String password) {
         User savedUser = new User(name, email, password);
         userRepository.save(savedUser);
+    }
+
+    private static Stream<User> nullCheckerUsers() {
+        return Stream.of(
+                new User(null, "test1", "test2"),
+                new User("test", null, "test2"),
+                new User("test", "test1", null)
+        );
+    }
+
+    private static Stream<User> duplicateCheckerUsers() {
+        return Stream.of(
+                new User("test", "test1", "test1"),
+                new User("test1", "test", "test1")
+        );
     }
 }
