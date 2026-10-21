@@ -87,7 +87,7 @@ public class UserService {
     }
 
     public BigDecimal getUserBalanceById(Long id) {
-        UserBalance balance = userBalanceRepository.findBalanceByUserId(id)
+        UserBalance balance = userBalanceRepository.findByUserId(id)
                 .orElseThrow(() -> new UserNotFoundException("User with this id: " + id + " does not exists"));
         return balance.getBalance();
     }

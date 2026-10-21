@@ -72,7 +72,7 @@ public class UserBalanceRepositoryIT extends DataJpaIntegrationTest {
 
     @Test
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    void findBalanceByUserId_shouldChangeUserBalanceOnce_whenEnvironmentIsConcurrency() {
+    void findBalanceByUserId_shouldChangeUserOnce_whenEnvironmentIsConcurrency() {
         long userId = 1L;
         long delayMs = 100L;
         BigDecimal oldBalance = new BigDecimal("123.32");
@@ -115,7 +115,7 @@ public class UserBalanceRepositoryIT extends DataJpaIntegrationTest {
 
         @Transactional(propagation = Propagation.REQUIRES_NEW)
         public boolean findUserBalanceAndUpdateWithDelay(Long userId, BigDecimal oldBalance, BigDecimal newBalance, long delay) {
-            UserBalance userBalance = userBalanceRepository.findBalanceByUserId(userId)
+            UserBalance userBalance = userBalanceRepository.findByUserId(userId)
                     .orElseThrow(() -> new IllegalArgumentException("UserBalance not found"));
             if (userBalance.getBalance().compareTo(oldBalance) != 0) {
                 return false;
