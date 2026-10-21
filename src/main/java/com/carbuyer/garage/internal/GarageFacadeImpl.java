@@ -24,10 +24,10 @@ class GarageFacadeImpl implements GarageFacade {
     }
 
     @Override
-    public void isChangedStatusFromEmptyToOccupiedAndSetCarId(Long emptyGarageSlotId,
-                                                              Long sellerGarageSlotId,
-                                                              UUID carId) {
-        service.isChangedStatusFromEmptyToOccupiedAndSetCarId(
+    public void changeGarageSlotStatusesAndIdInIt(Long emptyGarageSlotId,
+                                                  Long sellerGarageSlotId,
+                                                  UUID carId) {
+        service.garageSlotStatusesAndCarIdInItChanger(
                 emptyGarageSlotId,
                 sellerGarageSlotId,
                 carId);

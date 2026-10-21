@@ -15,7 +15,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -121,32 +120,6 @@ public class GarageSlotRepositoryIT extends DataJpaIntegrationTest {
 
         assertThat(resultSlot).isNull();
     }
-
-    // TODO: rewrite this......
-
-//    @Test
-//    void occupyFirstEmptySlot_shouldChangeStatusToOccupiedAndSetCarToThisSlot() {
-//        long userId = 1L;
-//        int slotNumber = 1;
-//        UUID carId = UUID.randomUUID();
-//        String randomVin1 = UUID.randomUUID().toString().replace("-", "").substring(0, 17);
-//        String model = "Opel";
-//        int mileage = 10000;
-//        int conditionScore = 85;
-//        BigDecimal price = new BigDecimal("123.21");
-//        long slotId = addUserAndGarageSlotToDb(userId, slotNumber, GarageSlotStatus.EMPTY);
-//        jdbcTemplate.update("INSERT INTO cars (id, vin, model, mileage, condition_score, real_price, owner_id) " +
-//                        "OVERRIDING SYSTEM VALUE VALUES (?, ?, ?, ?, ?, ?, ?)",
-//                carId, randomVin1, model, mileage, conditionScore, price, userId);
-//
-//        int result = garageSlotRepository.occupyFirstEmptySlot(userId, carId, "OCCUPIED");
-//
-//        GarageSlot afterChangingSlot = garageSlotRepository.findById(slotId).orElseThrow();
-//
-//        assertThat(result).isEqualTo(1);
-//        assertThat(afterChangingSlot.getCarId()).isEqualTo(carId);
-//        assertThat(afterChangingSlot.getStatus()).isEqualTo(GarageSlotStatus.OCCUPIED);
-//    }
 
     @Test
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
