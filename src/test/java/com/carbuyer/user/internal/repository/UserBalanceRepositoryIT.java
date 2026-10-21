@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.sql.Types;
+import java.util.NoSuchElementException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -73,6 +74,24 @@ public class UserBalanceRepositoryIT extends DataJpaIntegrationTest {
 
         assertThat(result).isEqualTo(1);
         assertThat(buyerBal.getBalance()).isEqualTo(newBuyerBalance);
+    }
+
+    @Test
+    void findByUserId_shouldReturnUserBalance_whenUserWithBalanceExists() {
+        long userId = 1L;
+        BigDecimal buyerBalance = new BigDecimal("228.21");
+        addUserAndHisBalanceToDb(userId, buyerBalance);
+
+        UserBalance savedBalance = userBalanceRepository.findByUserId(userId).orElseThrow();
+
+        assertThat(savedBalance.getBalance()).isEqualTo(buyerBalance);
+        assertThat(savedBalance.getUserId()).isEqualTo(userId);
+    }
+
+    @Test
+    void findByUserId_shouldThrownNoSuchElementException_whenUserOrBalanceNotExists() {
+        assertThatThrownBy(() -> userBalanceRepository.findByUserId(1L).orElseThrow())
+                .isInstanceOf(NoSuchElementException.class);
     }
 
     @Test
