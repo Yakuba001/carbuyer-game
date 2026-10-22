@@ -1,6 +1,6 @@
 package com.carbuyer.car.internal.repository;
 
-import com.carbuyer.DataJpaIntegrationTest;
+import com.carbuyer.containers.DataJpaIntegrationTest;
 import com.carbuyer.car.internal.entity.Car;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;

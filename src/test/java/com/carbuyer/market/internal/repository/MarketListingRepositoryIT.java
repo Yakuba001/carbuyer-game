@@ -1,6 +1,6 @@
 package com.carbuyer.market.internal.repository;
 
-import com.carbuyer.DataJpaIntegrationTest;
+import com.carbuyer.containers.DataJpaIntegrationTest;
 import com.carbuyer.market.internal.entity.ListingStatus;
 import com.carbuyer.market.internal.entity.MarketListing;
 import org.junit.jupiter.api.Test;

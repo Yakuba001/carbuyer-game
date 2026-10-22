@@ -1,6 +1,6 @@
 package com.carbuyer.garage.internal.repository;
 
-import com.carbuyer.DataJpaIntegrationTest;
+import com.carbuyer.containers.DataJpaIntegrationTest;
 import com.carbuyer.garage.internal.entity.GarageSlot;
 import com.carbuyer.garage.internal.entity.GarageSlotStatus;
 import jakarta.persistence.EntityManager;
