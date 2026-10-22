@@ -23,7 +23,7 @@ public class UserRepositoryIT extends DataJpaIntegrationTest {
 
     @ParameterizedTest
     @MethodSource(value = "duplicateCheckerUsers")
-    void checkUniqueNameEmailFields_shouldThrownDataViolationException_whenFieldsUnUnique(User user) {
+    void checkUniqueNameEmailFields_shouldThrowDataViolationException_whenFieldsUnUnique(User user) {
         addUserToDb("test", "test", "test");
 
         assertThatThrownBy(() -> userRepository.save(user)).isInstanceOf(DataIntegrityViolationException.class);
@@ -31,7 +31,7 @@ public class UserRepositoryIT extends DataJpaIntegrationTest {
 
     @ParameterizedTest
     @MethodSource(value = "nullCheckerUsers")
-    void checkNotNullConstraints_shouldThrownDataViolationException_whenFieldsAreNull(User user) {
+    void checkNotNullConstraints_shouldThrowDataViolationException_whenFieldsAreNull(User user) {
         assertThatThrownBy(() -> userRepository.save(user)).isInstanceOf(DataIntegrityViolationException.class);
     }
 
