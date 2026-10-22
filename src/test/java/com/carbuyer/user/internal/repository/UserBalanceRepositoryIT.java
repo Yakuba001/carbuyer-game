@@ -1,6 +1,6 @@
 package com.carbuyer.user.internal.repository;
 
-import com.carbuyer.DataJpaIntegrationTest;
+import com.carbuyer.containers.DataJpaIntegrationTest;
 import com.carbuyer.user.internal.entity.UserBalance;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,7 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.sql.Types;
-import java.util.NoSuchElementException;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -38,7 +38,7 @@ public class UserBalanceRepositoryIT extends DataJpaIntegrationTest {
     }
 
     @Test
-    void checkConstraintNotNullBalance_shouldThrownException_whenBalanceIsNull() {
+    void checkConstraintNotNullBalance_shouldThrowException_whenBalanceIsNull() {
         long userId = 1L;
         addUserToDb(userId);
 
@@ -89,9 +89,10 @@ public class UserBalanceRepositoryIT extends DataJpaIntegrationTest {
     }
 
     @Test
-    void findByUserId_shouldThrownNoSuchElementException_whenUserOrBalanceNotExists() {
-        assertThatThrownBy(() -> userBalanceRepository.findByUserId(1L).orElseThrow())
-                .isInstanceOf(NoSuchElementException.class);
+    void findByUserId_shouldReturnOptionalEmpty_whenUserOrBalanceNotExists() {
+        Optional<UserBalance> result = userBalanceRepository.findByUserId(1L);
+
+        assertThat(result).isEmpty();
     }
 
     @Test

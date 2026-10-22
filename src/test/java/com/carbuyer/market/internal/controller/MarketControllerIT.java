@@ -1,6 +1,6 @@
 package com.carbuyer.market.internal.controller;
 
-import com.carbuyer.BaseIntegrationTest;
+import com.carbuyer.containers.MockMvcIntegrationTest;
 import com.carbuyer.market.api.dto.CreateListingRequestDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityManager;
@@ -22,7 +22,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-public class MarketControllerIT extends BaseIntegrationTest {
+public class MarketControllerIT extends MockMvcIntegrationTest {
 
     @Autowired
     private MockMvc mockMvc;

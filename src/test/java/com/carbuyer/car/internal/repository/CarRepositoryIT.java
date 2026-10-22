@@ -1,6 +1,6 @@
 package com.carbuyer.car.internal.repository;
 
-import com.carbuyer.DataJpaIntegrationTest;
+import com.carbuyer.containers.DataJpaIntegrationTest;
 import com.carbuyer.car.internal.entity.Car;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -12,7 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.NoSuchElementException;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -27,7 +27,7 @@ public class CarRepositoryIT extends DataJpaIntegrationTest {
     private JdbcTemplate jdbcTemplate;
 
     @Test
-    void checkUniqueField_shouldThrownException_whenVinUnunique() {
+    void checkUniqueField_shouldThrowException_whenVinUnunique() {
         long userId = 1L;
         addUserToDb(userId);
         String randomVin1 = UUID.randomUUID().toString().replace("-", "").substring(0, 17);
@@ -44,7 +44,7 @@ public class CarRepositoryIT extends DataJpaIntegrationTest {
     }
 
     @Test
-    void checkConstraintWhenFieldCanBeOnlyPositive_shouldThrownException_whenMileageLowerThanZero() {
+    void checkConstraintWhenFieldCanBeOnlyPositive_shouldThrowException_whenMileageLowerThanZero() {
         long userId = 1L;
         addUserToDb(userId);
         addTestCorrectCarToDb(userId);
@@ -56,7 +56,7 @@ public class CarRepositoryIT extends DataJpaIntegrationTest {
     }
 
     @Test
-    void checkConstraintWhenFieldCanBeOnlyPositive_shouldThrownException_whenRealPriceLowerThanZero() {
+    void checkConstraintWhenFieldCanBeOnlyPositive_shouldThrowException_whenRealPriceLowerThanZero() {
         long userId = 1L;
         addUserToDb(userId);
         addTestCorrectCarToDb(userId);
@@ -80,7 +80,7 @@ public class CarRepositoryIT extends DataJpaIntegrationTest {
     }
 
     @Test
-    void checkConstraintToDeleteUser_shouldThrownException_whenUserHasACar() {
+    void checkConstraintToDeleteUser_shouldThrowException_whenUserHasACar() {
         long userId = 1L;
         addUserToDb(userId);
         addTestCorrectCarToDb(userId);
@@ -156,11 +156,12 @@ public class CarRepositoryIT extends DataJpaIntegrationTest {
     }
 
     @Test
-    void findForUpdateById_shouldThrownNoSuchElementException_whenCarDoesNotExist() {
+    void findForUpdateById_shouldReturnOptionalEmpty_whenCarDoesNotExist() {
         UUID carId = UUID.randomUUID();
 
-        assertThatThrownBy(() -> carRepository.findForUpdateById(carId).orElseThrow())
-                .isInstanceOf(NoSuchElementException.class);
+        Optional<Car> result = carRepository.findForUpdateById(carId);
+
+        assertThat(result).isEmpty();
     }
 
     private UUID addTestCorrectCarToDb(long userId) {

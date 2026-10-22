@@ -87,6 +87,9 @@ public class MarketService {
         }
         UUID carId = listing.getCarId();
         Long sellerId = listing.getSellerId();
+        if (Objects.equals(sellerId, buyerId)) {
+            throw new SelfBuyingException("You can`t buy your own car");
+        }
         if (!carFacade.isCarOwner(carId, sellerId)) {
             throw new NotCarOwnerException("This seller: " + sellerId + " is not owner");
         }
@@ -107,9 +110,6 @@ public class MarketService {
         }
         if (buyerBalance.compareTo(listing.getPrice()) < 0) {
             throw new InsufficientFundsException("You don`t have enough funds");
-        }
-        if (Objects.equals(sellerId, buyerId)) {
-            throw new SelfBuyingException("You can`t buy your own car");
         }
         if (!userFacade.carPurchase(buyerId, sellerId, buyerBalance, sellerBalance, listing.getPrice())) {
             throw new InsufficientFundsException("Something went wrong");

@@ -3,11 +3,13 @@ package com.carbuyer.market.internal.service;
 import com.carbuyer.car.api.CarFacade;
 import com.carbuyer.exception.exceptions.NotCarOwnerException;
 import com.carbuyer.exception.exceptions.NotListingOwnerException;
+import com.carbuyer.garage.api.GarageFacade;
 import com.carbuyer.market.api.dto.CreateListingRequestDto;
 import com.carbuyer.market.api.dto.MarketListingResponseDto;
 import com.carbuyer.market.internal.entity.ListingStatus;
 import com.carbuyer.market.internal.entity.MarketListing;
 import com.carbuyer.market.internal.repository.MarketListingRepository;
+import com.carbuyer.user.api.UserFacade;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -33,6 +35,10 @@ public class MarketServiceTest {
 
     @Mock
     private CarFacade carFacade;
+    @Mock
+    private UserFacade userFacade;
+    @Mock
+    private GarageFacade garageFacade;
     @Mock
     private MarketListingRepository repository;
     @InjectMocks
@@ -122,4 +128,45 @@ public class MarketServiceTest {
         assertThat(sellerId).isEqualTo(marketListingResponseDto.sellerId());
         assertThat(price).isEqualTo(marketListingResponseDto.price());
     }
+
+    // TODO: after find the best way to realize this method continue.......
+
+//    @Test
+//    void buyCar_shouldCloseListing_whenEverythingIsDone() {
+//        long buyerId = 1L;
+//        long sellerId = 2L;
+//        BigDecimal price = new BigDecimal("100");
+//        UUID listingId = UUID.randomUUID();
+//        UUID carId = UUID.randomUUID();
+//        MarketListing listing = new MarketListing(listingId, sellerId, null, price);
+//        listing.setStatus(ListingStatus.ACTIVE);
+//        listing.setCarId(carId);
+//        BigDecimal buyerBalance = new BigDecimal("100");
+//        BigDecimal sellerBalance = new BigDecimal("100");
+//        long buyerGarageSlotId = 1L;
+//        long sellerGarageSlotId = 2L;
+//
+//        when(userFacade.existsById(anyLong())).thenReturn(true);
+//        when(repository.findByIdForUpdate(any(UUID.class))).thenReturn(Optional.of(listing));
+//        when(carFacade.isCarOwner(any(UUID.class), anyLong())).thenReturn(true);
+//        when(userFacade.getUserBalanceById(anyLong())).thenReturn(buyerBalance);
+//        when(userFacade.getUserBalanceById(anyLong())).thenReturn(sellerBalance);
+//        when(garageFacade.getGarageSlotIdWithEmptyStatus(anyLong(), any())).thenReturn(buyerGarageSlotId);
+//        when(garageFacade.getGarageSlotIdWithEmptyStatus(anyLong(), any())).thenReturn(sellerGarageSlotId);
+//        when(userFacade.carPurchase(
+//                anyLong(),
+//                anyLong(),
+//                any(BigDecimal.class),
+//                any(BigDecimal.class),
+//                any(BigDecimal.class)))
+//                .thenReturn(true);
+//        when(carFacade.setNewCarOwner(anyLong(), anyLong(), any(UUID.class))).thenReturn(true);
+//        doNothing().when(garageFacade).changeGarageSlotStatusesAndIdInIt(anyLong(), anyLong(), any(UUID.class));
+//
+//        service.buyCar(buyerId, listingId);
+//
+//        assertThat(listing.getStatus()).isEqualTo(ListingStatus.SOLD);
+//        assertThat(listing.getBuyerId()).isEqualTo(buyerId);
+//        assertThat(listing.getClosedAt()).isNotNull();
+//    }
 }
