@@ -1,8 +1,7 @@
 package com.carbuyer.market.internal.service;
 
 import com.carbuyer.car.api.CarFacade;
-import com.carbuyer.exception.exceptions.NotCarOwnerException;
-import com.carbuyer.exception.exceptions.NotListingOwnerException;
+import com.carbuyer.exception.exceptions.*;
 import com.carbuyer.garage.api.GarageFacade;
 import com.carbuyer.market.api.dto.CreateListingRequestDto;
 import com.carbuyer.market.api.dto.MarketListingResponseDto;
@@ -43,6 +42,12 @@ public class MarketServiceTest {
     private MarketListingRepository repository;
     @InjectMocks
     private MarketService service;
+
+    private static final long TEST_SELLER_ID = 1L;
+    private static final long TEST_BUYER_ID = 2L;
+    private static final UUID TEST_LISTING_ID = UUID.randomUUID();
+    private static final BigDecimal TEST_PRICE = new BigDecimal("100");
+    private static final BigDecimal TEST_BUYER_BALANCE = new BigDecimal("200");
 
     @Test
     void createListing_shouldSaveMarketListing_whenSellerIsCarOwner() {
@@ -129,44 +134,149 @@ public class MarketServiceTest {
         assertThat(price).isEqualTo(marketListingResponseDto.price());
     }
 
-    // TODO: after find the best way to realize this method continue.......
+    @Test
+    void buyCar_shouldCloseListing_whenEverythingIsDone() {
+        long buyerId = 1L;
+        long sellerId = 2L;
+        BigDecimal price = new BigDecimal("100");
+        UUID listingId = UUID.randomUUID();
+        UUID carId = UUID.randomUUID();
+        MarketListing listing = new MarketListing(listingId, sellerId, null, price);
+        listing.setStatus(ListingStatus.ACTIVE);
+        listing.setCarId(carId);
+        BigDecimal buyerBalance = new BigDecimal("100");
+        BigDecimal sellerBalance = new BigDecimal("50");
+        long buyerGarageSlotId = 1L;
+        long sellerGarageSlotId = 2L;
+        when(userFacade.existsById(anyLong())).thenReturn(true);
+        when(repository.findByIdForUpdate(any(UUID.class))).thenReturn(Optional.of(listing));
+        when(carFacade.isCarOwner(any(UUID.class), anyLong())).thenReturn(true);
+        when(userFacade.getUserBalanceById(buyerId)).thenReturn(buyerBalance);
+        when(userFacade.getUserBalanceById(sellerId)).thenReturn(sellerBalance);
+        when(garageFacade.getGarageSlotIdWithEmptyStatus(eq(buyerId), any())).thenReturn(buyerGarageSlotId);
+        when(garageFacade.getSellerGarageSlotId(eq(sellerId), any(UUID.class))).thenReturn(sellerGarageSlotId);
+        when(userFacade.carPurchase(
+                anyLong(),
+                anyLong(),
+                any(BigDecimal.class),
+                any(BigDecimal.class),
+                any(BigDecimal.class)))
+                .thenReturn(true);
+        when(carFacade.setNewCarOwner(anyLong(), anyLong(), any(UUID.class))).thenReturn(true);
+        doNothing().when(garageFacade).changeGarageSlotStatusesAndIdInIt(anyLong(), anyLong(), any(UUID.class));
 
-//    @Test
-//    void buyCar_shouldCloseListing_whenEverythingIsDone() {
-//        long buyerId = 1L;
-//        long sellerId = 2L;
-//        BigDecimal price = new BigDecimal("100");
-//        UUID listingId = UUID.randomUUID();
-//        UUID carId = UUID.randomUUID();
-//        MarketListing listing = new MarketListing(listingId, sellerId, null, price);
-//        listing.setStatus(ListingStatus.ACTIVE);
-//        listing.setCarId(carId);
-//        BigDecimal buyerBalance = new BigDecimal("100");
-//        BigDecimal sellerBalance = new BigDecimal("100");
-//        long buyerGarageSlotId = 1L;
-//        long sellerGarageSlotId = 2L;
-//
-//        when(userFacade.existsById(anyLong())).thenReturn(true);
-//        when(repository.findByIdForUpdate(any(UUID.class))).thenReturn(Optional.of(listing));
-//        when(carFacade.isCarOwner(any(UUID.class), anyLong())).thenReturn(true);
-//        when(userFacade.getUserBalanceById(anyLong())).thenReturn(buyerBalance);
-//        when(userFacade.getUserBalanceById(anyLong())).thenReturn(sellerBalance);
-//        when(garageFacade.getGarageSlotIdWithEmptyStatus(anyLong(), any())).thenReturn(buyerGarageSlotId);
-//        when(garageFacade.getGarageSlotIdWithEmptyStatus(anyLong(), any())).thenReturn(sellerGarageSlotId);
-//        when(userFacade.carPurchase(
-//                anyLong(),
-//                anyLong(),
-//                any(BigDecimal.class),
-//                any(BigDecimal.class),
-//                any(BigDecimal.class)))
-//                .thenReturn(true);
-//        when(carFacade.setNewCarOwner(anyLong(), anyLong(), any(UUID.class))).thenReturn(true);
-//        doNothing().when(garageFacade).changeGarageSlotStatusesAndIdInIt(anyLong(), anyLong(), any(UUID.class));
-//
-//        service.buyCar(buyerId, listingId);
-//
-//        assertThat(listing.getStatus()).isEqualTo(ListingStatus.SOLD);
-//        assertThat(listing.getBuyerId()).isEqualTo(buyerId);
-//        assertThat(listing.getClosedAt()).isNotNull();
-//    }
+        service.buyCar(buyerId, listingId);
+
+        assertThat(listing.getStatus()).isEqualTo(ListingStatus.SOLD);
+        assertThat(listing.getBuyerId()).isEqualTo(buyerId);
+        assertThat(listing.getClosedAt()).isNotNull();
+    }
+
+    @Test
+    void buyCar_shouldThrowMissedDataException_whenListingIdIsNull() {
+        assertThatThrownBy(() -> service.buyCar(null, TEST_LISTING_ID))
+                .isInstanceOf(MissedDataException.class);
+    }
+
+    @Test
+    void buyCar_shouldThrowMissedDataException_whenBuyerIdIsNull() {
+        assertThatThrownBy(() -> service.buyCar(TEST_BUYER_ID, null))
+                .isInstanceOf(MissedDataException.class);
+    }
+
+    @Test
+    void buyCar_shouldThrowUserNotFoundException_whenUserDoesNotExists() {
+        when(userFacade.existsById(anyLong())).thenReturn(false);
+
+        assertThatThrownBy(() -> service.buyCar(TEST_BUYER_ID, TEST_LISTING_ID))
+                .isInstanceOf(UserNotFoundException.class);
+    }
+
+    @Test
+    void buyCar_shouldThrowListingNotFoundException_whenListingNotFound() {
+        when(userFacade.existsById(anyLong())).thenReturn(true);
+        when(repository.findByIdForUpdate(any(UUID.class))).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.buyCar(TEST_BUYER_ID, TEST_LISTING_ID))
+                .isInstanceOf(ListingNotFoundException.class);
+    }
+
+    @Test
+    void buyCar_shouldThrowInactiveListingException_whenListingStatusIsInactive() {
+        when(userFacade.existsById(anyLong())).thenReturn(true);
+        MarketListing listing = new MarketListing(TEST_LISTING_ID, TEST_SELLER_ID, null, TEST_PRICE);
+        listing.setStatus(ListingStatus.SOLD);
+        when(repository.findByIdForUpdate(any(UUID.class))).thenReturn(Optional.of(listing));
+
+        assertThatThrownBy(() -> service.buyCar(TEST_BUYER_ID, TEST_LISTING_ID))
+                .isInstanceOf(InactiveListingException.class);
+    }
+
+    @Test
+    void buyCar_shouldThrowSelfBuyingException_whenBuyerIdIsEqualToSellerId() {
+        when(userFacade.existsById(anyLong())).thenReturn(true);
+        MarketListing listing = new MarketListing(TEST_LISTING_ID, TEST_BUYER_ID, null, TEST_PRICE);
+        listing.setStatus(ListingStatus.ACTIVE);
+        when(repository.findByIdForUpdate(any(UUID.class))).thenReturn(Optional.of(listing));
+
+        assertThatThrownBy(() -> service.buyCar(TEST_BUYER_ID, TEST_LISTING_ID)).isInstanceOf(SelfBuyingException.class);
+    }
+
+    @Test
+    void buyCar_shouldThrowNotCarOwnerException_whenSellerIsNotCarOwner() {
+        when(userFacade.existsById(anyLong())).thenReturn(true);
+        MarketListing listing = new MarketListing(TEST_LISTING_ID, TEST_SELLER_ID, null, TEST_PRICE);
+        listing.setStatus(ListingStatus.ACTIVE);
+        when(repository.findByIdForUpdate(any(UUID.class))).thenReturn(Optional.of(listing));
+        when(carFacade.isCarOwner(any(UUID.class), anyLong())).thenReturn(false);
+
+        assertThatThrownBy(() -> service.buyCar(TEST_BUYER_ID, TEST_LISTING_ID))
+                .isInstanceOf(NotCarOwnerException.class);
+    }
+
+    @Test
+    void buyCar_shouldThrowInsufficientFundsException_whenBuyerDoesNotHaveEnoughFounds() {
+        when(userFacade.existsById(anyLong())).thenReturn(true);
+        MarketListing listing = new MarketListing(TEST_LISTING_ID, TEST_SELLER_ID, null, TEST_PRICE);
+        listing.setStatus(ListingStatus.ACTIVE);
+        when(repository.findByIdForUpdate(any(UUID.class))).thenReturn(Optional.of(listing));
+        when(carFacade.isCarOwner(any(UUID.class), anyLong())).thenReturn(true);
+        when(userFacade.getUserBalanceById(anyLong())).thenReturn(BigDecimal.ZERO);
+
+        assertThatThrownBy(() -> service.buyCar(TEST_BUYER_ID, TEST_LISTING_ID))
+                .isInstanceOf(InsufficientFundsException.class);
+    }
+
+    @Test
+    void buyCar_shouldThrowInsufficientFundsException_whenBuyerCantBuyCurrentCar() {
+        when(userFacade.existsById(anyLong())).thenReturn(true);
+        MarketListing listing = new MarketListing(TEST_LISTING_ID, TEST_SELLER_ID, null, TEST_PRICE);
+        listing.setStatus(ListingStatus.ACTIVE);
+        when(repository.findByIdForUpdate(any(UUID.class))).thenReturn(Optional.of(listing));
+        when(carFacade.isCarOwner(any(UUID.class), anyLong())).thenReturn(true);
+        when(userFacade.getUserBalanceById(anyLong())).thenReturn(TEST_BUYER_BALANCE);
+        when(userFacade
+                .carPurchase(anyLong(), anyLong(), any(BigDecimal.class), any(BigDecimal.class), any(BigDecimal.class)))
+                .thenReturn(false);
+
+        assertThatThrownBy(() -> service.buyCar(TEST_BUYER_ID, TEST_LISTING_ID))
+                .isInstanceOf(InsufficientFundsException.class);
+    }
+
+    @Test
+    void buyCar_shouldThrowChangeCarOwnerException_whenBuyerCantBecameCarOwner() {
+        when(userFacade.existsById(anyLong())).thenReturn(true);
+        MarketListing listing = new MarketListing(TEST_LISTING_ID, TEST_SELLER_ID, null, TEST_PRICE);
+        listing.setStatus(ListingStatus.ACTIVE);
+        when(repository.findByIdForUpdate(any(UUID.class))).thenReturn(Optional.of(listing));
+        when(carFacade.isCarOwner(any(UUID.class), anyLong())).thenReturn(true);
+        when(userFacade.getUserBalanceById(anyLong())).thenReturn(TEST_BUYER_BALANCE);
+        when(userFacade
+                .carPurchase(anyLong(), anyLong(), any(BigDecimal.class), any(BigDecimal.class), any(BigDecimal.class)))
+                .thenReturn(true);
+        when(carFacade.setNewCarOwner(anyLong(), anyLong(), any(UUID.class))).thenReturn(false);
+
+        assertThatThrownBy(() -> service.buyCar(TEST_BUYER_ID, TEST_LISTING_ID))
+                .isInstanceOf(ChangeCarOwnerException.class);
+    }
 }
