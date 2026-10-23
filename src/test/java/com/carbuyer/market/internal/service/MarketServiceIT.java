@@ -1,8 +1,11 @@
 package com.carbuyer.market.internal.service;
 
 import com.carbuyer.containers.BaseIntegrationTest;
+import com.carbuyer.market.internal.entity.ListingStatus;
+import com.carbuyer.market.internal.entity.MarketListing;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.math.BigDecimal;
@@ -28,21 +31,17 @@ public class MarketServiceIT extends BaseIntegrationTest {
     private static final UUID CAR_ID = UUID.randomUUID();
     private static final UUID LISTING_ID = UUID.randomUUID();
 
-    private static final int THREAD_COUNT = 51;
-
-    // TODO: check what happened in data base after success results...........
-
     @Test
     void buyCar_shouldPreventRaceCondition_whenMultipleUsersBuySameListing() {
         addUsersToDb();
         AtomicInteger successCount = new AtomicInteger(0);
         AtomicInteger failureCount = new AtomicInteger(0);
         CountDownLatch startLatch = new CountDownLatch(1);
-        CountDownLatch finishLatch = new CountDownLatch(THREAD_COUNT);
+        CountDownLatch finishLatch = new CountDownLatch(threadCount);
         boolean finished = false;
 
-        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()){
-            for (int i = 1; i <= THREAD_COUNT; i++) {
+        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            for (int i = 1; i <= threadCount; i++) {
                 long finalI = i;
                 executor.execute(() -> {
                     try {
@@ -64,8 +63,24 @@ public class MarketServiceIT extends BaseIntegrationTest {
             }
         }
 
+        long newCarOwnerId =
+                jdbcTemplate.queryForObject("SELECT owner_id FROM cars WHERE id = ?", Long.class, CAR_ID);
+        MarketListing resultListing =
+                jdbcTemplate.queryForObject(
+                        "SELECT * FROM market_listings WHERE id = ?",
+                        new BeanPropertyRowMapper<>(MarketListing.class),
+                        LISTING_ID);
+
         assertThat(finished).isTrue();
-        assertThat(failureCount.get()).isEqualTo(THREAD_COUNT - 1);
+        assertThat(successCount.get()).isEqualTo(1);
+        assertThat(failureCount.get()).isEqualTo(threadCount - 1);
+
+        assertThat(resultListing).isNotNull();
+        assertThat(newCarOwnerId).isNotEqualTo(SELLER_ID);
+        assertThat(resultListing.getStatus()).isEqualTo(ListingStatus.SOLD);
+        assertThat(resultListing.getClosedAt()).isNotNull();
+        assertThat(resultListing.getSellerId()).isEqualTo(SELLER_ID);
+        assertThat(resultListing.getBuyerId()).isEqualTo(newCarOwnerId);
     }
 
     private void addUsersToDb() {
@@ -78,10 +93,10 @@ public class MarketServiceIT extends BaseIntegrationTest {
         int conditionScore = 85;
         BigDecimal price = new BigDecimal("123.21");
         BigDecimal listingPrice = new BigDecimal("50");
-        List<String> usernames = IntStream.range(0, THREAD_COUNT)
+        List<String> usernames = IntStream.range(0, threadCount)
                 .mapToObj(i -> "name" + i)
                 .toList();
-        List<String> emails = IntStream.range(0, THREAD_COUNT)
+        List<String> emails = IntStream.range(0, threadCount)
                 .mapToObj(i -> "email" + i + "@g.c")
                 .toList();
         jdbcTemplate.update("INSERT INTO users (id, name, email, password_hash) OVERRIDING SYSTEM VALUE " +
@@ -95,7 +110,7 @@ public class MarketServiceIT extends BaseIntegrationTest {
         jdbcTemplate.update("INSERT INTO market_listings (id, car_id, seller_id, price) OVERRIDING SYSTEM VALUE " +
                 "VALUES (?, ?, ?, ?)", LISTING_ID, CAR_ID, SELLER_ID, listingPrice);
 
-        for (int i = 1; i < THREAD_COUNT; i++) {
+        for (int i = 1; i < threadCount; i++) {
             jdbcTemplate.update("INSERT INTO users (id, name, email, password_hash) OVERRIDING SYSTEM VALUE " +
                             "VALUES (?, ?, ?, ?)",
                     i, usernames.get(i), emails.get(i), password);
