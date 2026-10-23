@@ -121,5 +121,6 @@ public class MarketService {
         listing.setStatus(ListingStatus.SOLD);
         listing.setBuyerId(buyerId);
         listing.setClosedAt(Instant.now());
+        repository.save(listing);
     }
 }

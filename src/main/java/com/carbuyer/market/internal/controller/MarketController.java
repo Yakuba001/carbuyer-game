@@ -27,7 +27,7 @@ public class MarketController {
     @PostMapping("/listings")
     public ResponseEntity<MarketListingResponseDto> createListing(@Valid @RequestBody CreateListingRequestDto request,
                                                                   @AuthenticationPrincipal UserDetails userDetails) {
-        Long sellerId = userFacade.findIdByUsername(userDetails.getUsername());
+        Long sellerId = getUserId(userDetails);
         MarketListingResponseDto response = service.createListing(sellerId, request);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
@@ -36,7 +36,7 @@ public class MarketController {
 
     @PostMapping("/listings/{id}/cancel")
     public ResponseEntity<Void> cancelListing(@PathVariable UUID id, @AuthenticationPrincipal UserDetails userDetails) {
-        Long sellerId = userFacade.findIdByUsername(userDetails.getUsername());
+        Long sellerId = getUserId(userDetails);
         service.cancelListing(sellerId, id);
         return ResponseEntity.noContent().build();
     }
@@ -45,5 +45,16 @@ public class MarketController {
     public ResponseEntity<Page<MarketListingResponseDto>> getListings(Pageable pageable) {
         Page<MarketListingResponseDto> listingsPage = service.findAllByStatus(pageable);
         return ResponseEntity.ok(listingsPage);
+    }
+
+    @PostMapping("/listings/{id}/buy")
+    public ResponseEntity<Void> buyListing(@PathVariable UUID id, @AuthenticationPrincipal UserDetails userDetails) {
+        Long buyerId = getUserId(userDetails);
+        service.buyCar(buyerId, id);
+        return ResponseEntity.noContent().build();
+    }
+
+    private Long getUserId(UserDetails userDetails) {
+        return userFacade.findIdByUsername(userDetails.getUsername());
     }
 }
