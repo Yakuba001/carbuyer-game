@@ -71,7 +71,8 @@ public class GlobalExceptionHandler {
             UserNotFoundException.class,
             CarNotFoundException.class,
             ListingNotFoundException.class,
-            GarageSlotNotFoundException.class})
+            GarageSlotNotFoundException.class,
+            ListingUnexistsException.class})
     public ResponseEntity<ErrorResponse> handleUserNotFound(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(new ErrorResponse(404, "Not found", ex.getMessage(), Instant.now()));
