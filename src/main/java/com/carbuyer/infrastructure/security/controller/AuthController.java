@@ -36,9 +36,13 @@ public class AuthController {
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "201", description = "User successfully registered",
-                    content = @Content(schema = @Schema(implementation = AuthResponse.class))),
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = AuthResponse.class))),
             @ApiResponse(responseCode = "400", description = "Validation failed or email/name already exists",
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class)))
     })
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
         AuthResponse authResponse = service.register(request);
@@ -54,11 +58,17 @@ public class AuthController {
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Successfully authenticated",
-                    content = @Content(schema = @Schema(implementation = AuthResponse.class))),
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = AuthResponse.class))),
             @ApiResponse(responseCode = "401", description = "Invalid email or password",
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "400", description = "Validation failed (invalid email or password)",
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class)))
     })
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         AuthResponse authResponse = service.login(request);
@@ -74,11 +84,17 @@ public class AuthController {
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Tokens successfully refreshed",
-                    content = @Content(schema = @Schema(implementation = AuthResponse.class))),
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = AuthResponse.class))),
             @ApiResponse(responseCode = "401", description = "Refresh token is expired or invalid",
-            content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "400", description = "Validation failed (token is blank)",
-            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class)))
     })
     public ResponseEntity<AuthResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
         AuthResponse authResponse = service.refreshToken(request);
