@@ -52,7 +52,7 @@ public class MarketService {
     @Transactional
     public void cancelListing(Long sellerId, UUID listingId) {
         MarketListing existListing = repository.findById(listingId)
-                .orElseThrow(() -> new IllegalArgumentException("Listing with id: " + listingId + " not found"));
+                .orElseThrow(() -> new ListingUnexistsException("Listing with id: " + listingId + " not found"));
         if (!existListing.getSellerId().equals(sellerId)) {
             throw new NotListingOwnerException("This listing does not belong to: " + sellerId);
         }

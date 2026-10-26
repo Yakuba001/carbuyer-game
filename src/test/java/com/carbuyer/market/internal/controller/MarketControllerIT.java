@@ -60,6 +60,23 @@ public class MarketControllerIT extends MockMvcIntegrationTest {
 
     @Test
     @WithMockUser(username = "Bob")
+    void createListing_shouldReturnBadRequest_whenSendInvalidRequest() throws Exception {
+        CreateListingRequestDto requestDto = new CreateListingRequestDto(null, null);
+
+        mockMvc.perform(post("/api/v1/market/listings")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(requestDto)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void createListing_shouldReturnForbitten_whenUserWithoutAuthentication() throws Exception {
+        mockMvc.perform(post("/api/v1/market/listings"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "Bob")
     void cancelListing_shouldChangeStatusFromActiveToCancelledAndSetClosedAtTime() throws Exception {
         long sellerId = 1L;
         UUID listingId = UUID.randomUUID();
@@ -84,7 +101,20 @@ public class MarketControllerIT extends MockMvcIntegrationTest {
 
     @Test
     @WithMockUser(username = "Bob")
-    void getListings_shouldReturnPageWithAllActiveListings() throws Exception {
+    void cancelListing_shouldReturnNotFound_whenListingDoesNotExistInDb() throws Exception {
+        mockMvc.perform(post("/api/v1/market/listings/{id}/cancel", UUID.randomUUID()))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void cancelListing_shouldReturnForbitten_whenUserWithoutAuthentication() throws Exception {
+        mockMvc.perform(post("/api/v1/market/listings/{id}/cancel", UUID.randomUUID()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "Bob")
+    void getListings_shouldReturnPageWithAllActiveListingsAndStatusOk() throws Exception {
         long sellerId = 1L;
         UUID[] uuids = {UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID()};
 
@@ -132,6 +162,12 @@ public class MarketControllerIT extends MockMvcIntegrationTest {
         assertThat(resultMap.get("buyer_id")).isEqualTo(buyerId);
 
         assertThat(carOwnerId).isEqualTo(buyerId);
+    }
+
+    @Test
+    void buyCar_shouldReturnForbitten_whenUserWithoutAuthentication() throws Exception {
+        mockMvc.perform(post("/api/v1/market/listings/{id}/buy", UUID.randomUUID()))
+                .andExpect(status().isForbidden());
     }
 
     private void insertListing(CreateListingRequestDto requestDto, long sellerId, UUID listingId) {
