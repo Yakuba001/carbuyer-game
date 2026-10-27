@@ -38,7 +38,7 @@ public class MarketControllerIT extends MockMvcIntegrationTest {
     private static final BigDecimal TEST_PRICE = new BigDecimal("10");
 
     @Test
-    @WithMockUser(username = "Bob")
+    @WithMockUser(username = "bib@g.c")
     void createListing_shouldReturnCreatedStatusAndSaveToDbListing() throws Exception {
         long sellerId = 1L;
         addUserToDb(sellerId);
@@ -59,7 +59,7 @@ public class MarketControllerIT extends MockMvcIntegrationTest {
     }
 
     @Test
-    @WithMockUser(username = "Bob")
+    @WithMockUser(username = "bib@g.c")
     void createListing_shouldReturnBadRequest_whenSendInvalidRequest() throws Exception {
         CreateListingRequestDto requestDto = new CreateListingRequestDto(null, null);
 
@@ -76,7 +76,7 @@ public class MarketControllerIT extends MockMvcIntegrationTest {
     }
 
     @Test
-    @WithMockUser(username = "Bob")
+    @WithMockUser(username = "bib@g.c")
     void cancelListing_shouldChangeStatusFromActiveToCancelledAndSetClosedAtTime() throws Exception {
         long sellerId = 1L;
         UUID listingId = UUID.randomUUID();
@@ -100,7 +100,7 @@ public class MarketControllerIT extends MockMvcIntegrationTest {
     }
 
     @Test
-    @WithMockUser(username = "Bob")
+    @WithMockUser(username = "bib@g.c")
     void cancelListing_shouldReturnNotFound_whenListingDoesNotExistInDb() throws Exception {
         mockMvc.perform(post("/api/v1/market/listings/{id}/cancel", UUID.randomUUID()))
                 .andExpect(status().isNotFound());
@@ -113,7 +113,7 @@ public class MarketControllerIT extends MockMvcIntegrationTest {
     }
 
     @Test
-    @WithMockUser(username = "Bob")
+    @WithMockUser(username = "bib@g.c")
     void getListings_shouldReturnPageWithAllActiveListingsAndStatusOk() throws Exception {
         long sellerId = 1L;
         UUID[] uuids = {UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID()};
@@ -138,7 +138,7 @@ public class MarketControllerIT extends MockMvcIntegrationTest {
     }
 
     @Test
-    @WithMockUser("John")
+    @WithMockUser("b@g.c")
     void buyCar_shouldReturnNoContent() throws Exception {
         long sellerId = 1L;
         long buyerId = 2L;
