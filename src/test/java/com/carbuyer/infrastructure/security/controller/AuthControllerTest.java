@@ -1,145 +1,122 @@
 package com.carbuyer.infrastructure.security.controller;
 
-import com.carbuyer.infrastructure.security.JwtService;
+import com.carbuyer.containers.BaseIntegrationTest;
 import com.carbuyer.infrastructure.security.dto.AuthResponse;
 import com.carbuyer.infrastructure.security.dto.LoginRequest;
 import com.carbuyer.infrastructure.security.dto.RefreshTokenRequest;
 import com.carbuyer.infrastructure.security.dto.RegisterRequest;
-import com.carbuyer.infrastructure.security.service.AuthService;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.verifyNoInteractions;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@WebMvcTest(AuthController.class)
-@AutoConfigureMockMvc(addFilters = false)
-public class AuthControllerTest {
+public class AuthControllerTest extends BaseIntegrationTest {
+
+    private static final String TEST_USERNAME = "Boss";
+    private static final String TEST_EMAIL = "boss@gmail.com";
+    private static final String TEST_PASSWORD = "12345678";
 
     @Autowired
-    private MockMvc mockMvc;
-
-    @MockBean
-    private AuthService service;
-    @MockBean
-    private JwtService jwtService;
-
+    private TestRestTemplate restTemplate;
     @Autowired
-    private ObjectMapper objectMapper;
+    private JdbcTemplate jdbcTemplate;
 
-    @Test
-    void register_withInvalidEmailOrShortPassword_shouldReturn400() throws Exception {
-        RegisterRequest request = new RegisterRequest("user", "invalid-email", "pass");
-
-        mockMvc.perform(post("/api/v1/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
-
-        verifyNoInteractions(service);
+    @AfterEach
+    public void tearDown() {
+        jdbcTemplate.execute("TRUNCATE TABLE users CASCADE");
     }
 
-    @Test
-    void login_withInvalidEmailOrShortPassword_shouldReturn400() throws Exception {
-        LoginRequest request = new LoginRequest("invalid-email", "pass");
-
-        mockMvc.perform(post("/api/v1/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
-
-        verifyNoInteractions(service);
-    }
+    // TODO: Check 401/403 Unauthorized/Forbidden.........................................
 
     @Test
-    void refresh_withInvalidToken_shouldReturn400() throws Exception {
-        RefreshTokenRequest request = new RefreshTokenRequest("  ");
+    void register_shouldReturn201_whenUserWithThisNameOrEmailDoesNotExistAndRequestWithValidData() {
+        RegisterRequest registerRequest = new RegisterRequest(TEST_USERNAME, TEST_EMAIL, TEST_PASSWORD);
 
-        mockMvc.perform(post("/api/v1/auth/refresh")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
+        ResponseEntity<AuthResponse> response = restTemplate
+                .postForEntity("/api/v1/auth/register", registerRequest, AuthResponse.class);
 
-        verifyNoInteractions(service);
-    }
-
-    @Test
-    void register_withValidRequest_shouldReturn201WithTokens() throws Exception {
-        RegisterRequest request = new RegisterRequest("user", "user@mail.com", "password");
-        String expectedRefreshToken = "refreshToken";
-        String expectedAccessToken = "accessToken";
-        when(service.register(request))
-                .thenReturn(new AuthResponse(expectedAccessToken, expectedRefreshToken));
-
-        MvcResult result = mockMvc.perform(post("/api/v1/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andReturn();
-
-        AuthResponse authResponse =
-                objectMapper.readValue(result.getResponse().getContentAsString(), AuthResponse.class);
-
-        assertThat(result).isNotNull();
-        assertThat(result.getResponse().getStatus()).isEqualTo(HttpStatus.CREATED.value());
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        AuthResponse authResponse = response.getBody();
         assertThat(authResponse).isNotNull();
-        assertThat(authResponse.accessToken()).isEqualTo(expectedAccessToken);
-        assertThat(authResponse.refreshToken()).isEqualTo(expectedRefreshToken);
+        assertThat(authResponse.accessToken()).isNotNull();
+        assertThat(authResponse.refreshToken()).isNotNull();
     }
 
     @Test
-    void login_withValidRequest_shouldReturn200WithTokens() throws Exception {
-        LoginRequest request = new LoginRequest("user@mail.com", "password");
-        String expectedAccessToken = "accessToken";
-        String expectedRefreshToken = "refreshToken";
-        when(service.login(request))
-                .thenReturn(new AuthResponse(expectedAccessToken, expectedRefreshToken));
+    void register_shouldReturn400_whenFieldsInRequestInvalid() {
+        RegisterRequest registerRequest = new RegisterRequest(TEST_USERNAME, "Invalid", TEST_PASSWORD);
 
-        MvcResult result = mockMvc.perform(post("/api/v1/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andReturn();
+        ResponseEntity<AuthResponse> response = restTemplate
+                .postForEntity("/api/v1/auth/register", registerRequest, AuthResponse.class);
 
-        AuthResponse authResponse =
-                objectMapper.readValue(result.getResponse().getContentAsString(), AuthResponse.class);
-
-        assertThat(result).isNotNull();
-        assertThat(result.getResponse().getStatus()).isEqualTo(HttpStatus.OK.value());
-        assertThat(authResponse).isNotNull();
-        assertThat(authResponse.accessToken()).isEqualTo(expectedAccessToken);
-        assertThat(authResponse.refreshToken()).isEqualTo(expectedRefreshToken);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     @Test
-    void refresh_withValidToken_shouldReturn200WithTokens() throws Exception {
-        RefreshTokenRequest request = new RefreshTokenRequest("refreshToken");
-        String expectedAccessToken = "accessToken";
-        String expectedRefreshToken = "refreshToken";
-        when(service.refreshToken(request))
-                .thenReturn(new AuthResponse(expectedAccessToken, expectedRefreshToken));
+    void login_shouldReturn200_whenUserExistsAndLoginPasswordIsCorrect() {
+        registerUserAndGetHisRefreshToken();
+        LoginRequest loginRequest = new LoginRequest(TEST_EMAIL, TEST_PASSWORD);
 
-        MvcResult result = mockMvc.perform(post("/api/v1/auth/refresh")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andReturn();
+        ResponseEntity<AuthResponse> response = restTemplate
+                .postForEntity("/api/v1/auth/login", loginRequest, AuthResponse.class);
+        AuthResponse authResponse = response.getBody();
 
-        AuthResponse authResponse =
-                objectMapper.readValue(result.getResponse().getContentAsString(), AuthResponse.class);
-
-        assertThat(result).isNotNull();
-        assertThat(result.getResponse().getStatus()).isEqualTo(HttpStatus.OK.value());
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(authResponse).isNotNull();
-        assertThat(authResponse.accessToken()).isEqualTo(expectedAccessToken);
-        assertThat(authResponse.refreshToken()).isEqualTo(expectedRefreshToken);
+        assertThat(authResponse.accessToken()).isNotNull();
+        assertThat(authResponse.refreshToken()).isNotNull();
+    }
+
+    @Test
+    void login_shouldReturn400_whenFieldsInRequestInvalid() {
+        LoginRequest loginRequest = new LoginRequest("Invalid", TEST_PASSWORD);
+
+        ResponseEntity<AuthResponse> response = restTemplate
+                .postForEntity("/api/v1/auth/login", loginRequest, AuthResponse.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    void refresh_shouldReturn200_whenUserExistsAndRefreshTokenIsCorrect() {
+        String exampleToken = registerUserAndGetHisRefreshToken();
+        RefreshTokenRequest refreshTokenRequest = new RefreshTokenRequest(exampleToken);
+
+        ResponseEntity<AuthResponse> response = restTemplate
+                .postForEntity("/api/v1/auth/refresh", refreshTokenRequest, AuthResponse.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        AuthResponse authResponse = response.getBody();
+
+        assertThat(authResponse).isNotNull();
+        assertThat(authResponse.accessToken()).isNotNull();
+        assertThat(authResponse.refreshToken()).isNotNull();
+        assertThat(authResponse.refreshToken()).isEqualTo(exampleToken);
+    }
+
+    @Test
+    void refresh_shouldReturn400_whenFieldsInRequestInvalid() {
+        RefreshTokenRequest refreshTokenRequest = new RefreshTokenRequest("");
+
+        ResponseEntity<AuthResponse> response = restTemplate
+                .postForEntity("/api/v1/auth/refresh", refreshTokenRequest, AuthResponse.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    private String registerUserAndGetHisRefreshToken() {
+        RegisterRequest registerRequest = new RegisterRequest(TEST_USERNAME, TEST_EMAIL, TEST_PASSWORD);
+
+        ResponseEntity<AuthResponse> response = restTemplate
+                .postForEntity("/api/v1/auth/register", registerRequest, AuthResponse.class);
+        AuthResponse authResponse = response.getBody();
+
+        assertThat(authResponse).isNotNull();
+        return authResponse.refreshToken();
     }
 }
