@@ -130,10 +130,10 @@ public class UserServiceTest {
     }
 
     @Test
-    void findIdByUsername_whenUsernameNotExists_shouldThrowIllegalArgumentException() {
+    void findIdByUsername_whenEmailNotExists_shouldThrowIllegalArgumentException() {
         String notExisting = "notExistingUsername";
 
-        assertThatThrownBy(() -> userService.findIdByUsername(notExisting))
+        assertThatThrownBy(() -> userService.findIdByEmail(notExisting))
                 .isInstanceOf(UserNotFoundException.class);
     }
 

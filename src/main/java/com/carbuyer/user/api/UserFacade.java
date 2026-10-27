@@ -10,7 +10,7 @@ public interface UserFacade {
     boolean existsByUsername(String username);
     UserDetails save(String username, String email, String password);
     UserDetails findByEmail(String email);
-    Long findIdByUsername(String username);
+    Long findUserIdByEmail(String email);
     boolean existsById(Long id);
     BigDecimal getUserBalanceById(Long id);
     boolean carPurchase(Long buyerId,

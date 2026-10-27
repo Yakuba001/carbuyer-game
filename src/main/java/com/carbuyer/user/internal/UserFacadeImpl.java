@@ -47,8 +47,8 @@ public class UserFacadeImpl implements UserFacade {
     }
 
     @Override
-    public Long findIdByUsername(String username) {
-        return service.findIdByUsername(username);
+    public Long findUserIdByEmail(String email) {
+        return service.findIdByEmail(email);
     }
 
     @Override
