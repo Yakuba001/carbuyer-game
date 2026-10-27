@@ -30,12 +30,20 @@ public class UserFacadeImpl implements UserFacade {
     @Override
     public UserDetails save(String username, String email, String password) {
         UserDto user = service.createUser(new CreateUserCommand(username, email, password));
-        return User.builder().username(user.name()).build();
+        return User.builder()
+                .username(user.email())
+                .password(password)
+                .roles("USER")
+                .build();
     }
 
     @Override
     public UserDetails findByEmail(String email) {
-        return User.builder().username(service.getUsernameByEmail(email)).build();
+        return User.builder()
+                .username(email)
+                .password("")
+                .roles("USER")
+                .build();
     }
 
     @Override

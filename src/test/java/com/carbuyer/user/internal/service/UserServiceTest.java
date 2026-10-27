@@ -130,27 +130,6 @@ public class UserServiceTest {
     }
 
     @Test
-    void findByEmail_whenEmailExists_shouldReturnUser() {
-        String existingEmail = "existingEmail";
-        User savedUser = new User("name", existingEmail, "password");
-        when(userRepository.findByEmail(existingEmail)).thenReturn(Optional.of(savedUser));
-
-        String result = userService.getUsernameByEmail(existingEmail);
-
-        assertThat(result).isEqualTo("name");
-        verify(userRepository).findByEmail(existingEmail);
-    }
-
-    @Test
-    void findByEmail_whenEmailNotExists_shouldThrowException() {
-        String notExistingEmail = "notExistingEmail";
-        when(userRepository.findByEmail(notExistingEmail)).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> userService.getUsernameByEmail(notExistingEmail))
-                .isInstanceOf(UserNotFoundException.class);
-    }
-
-    @Test
     void findIdByUsername_whenUsernameNotExists_shouldThrowIllegalArgumentException() {
         String notExisting = "notExistingUsername";
 

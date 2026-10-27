@@ -61,7 +61,7 @@ public class JwtAuthenticationFilterTest {
     void doFilterInternal_whenJwtExceptionOccurs_shouldNotAuthenticateAndContinueFilterChain()
             throws IOException, ServletException {
         when(request.getHeader("Authorization")).thenReturn("Bearer " + testToken);
-        when(jwtService.extractUsername(testToken)).thenThrow(new ExpiredJwtException(null, null, "Expired"));
+        when(jwtService.extractUserEmail(testToken)).thenThrow(new ExpiredJwtException(null, null, "Expired"));
 
         jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
 
@@ -73,7 +73,7 @@ public class JwtAuthenticationFilterTest {
     void doFilterInternal_whenValidToken_shouldAuthenticateUserInsideChain() throws IOException, ServletException {
         when(request.getHeader("Authorization")).thenReturn("Bearer " + testToken);
         String testUsername = "hello";
-        when(jwtService.extractUsername(testToken)).thenReturn(testUsername);
+        when(jwtService.extractUserEmail(testToken)).thenReturn(testUsername);
         when(userDetailsService.loadUserByUsername(testUsername)).thenReturn(userDetails);
         when(jwtService.isTokenValid(testToken, userDetails)).thenReturn(true);
 

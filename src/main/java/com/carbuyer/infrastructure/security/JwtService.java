@@ -47,12 +47,12 @@ public class JwtService {
                 .signWith(signingKey).compact();
     }
 
-    public String extractUsername(String token) {
+    public String extractUserEmail(String token) {
         return extractAllClaims(token).getSubject();
     }
 
     public boolean isTokenValid(String token, UserDetails userDetails) {
-        String usernameFromToken = extractUsername(token);
+        String usernameFromToken = extractUserEmail(token);
         return usernameFromToken.equals(userDetails.getUsername());
     }
 
