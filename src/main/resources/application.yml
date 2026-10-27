@@ -50,7 +50,16 @@ server:
   error:
     include-message: always
 
+info:
+  app:
+    name: "Carbuyer service"
+    description: "Backend for remote server"
+    version: "1.0.0"
+
 management:
+  info:
+    env:
+      enabled: true
   endpoints:
     web:
       exposure:
