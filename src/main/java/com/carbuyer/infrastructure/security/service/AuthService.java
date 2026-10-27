@@ -49,7 +49,7 @@ public class AuthService {
     }
 
     public AuthResponse refreshToken(RefreshTokenRequest request) {
-        String email = jwtService.extractUsername(request.refreshToken());
+        String email = jwtService.extractUserEmail(request.refreshToken());
         UserDetails user = userFacade.findByEmail(email);
         boolean isTokenValid = jwtService.isTokenValid(request.refreshToken(), user);
         if (isTokenValid) {

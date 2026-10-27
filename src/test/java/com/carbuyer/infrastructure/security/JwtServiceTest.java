@@ -78,10 +78,10 @@ public class JwtServiceTest {
     }
 
     @Test
-    void extractUsername_returnsUsername() {
+    void extractUsername_returnsUserEmail() {
         String token = generateTestToken(expectedUser, testAccessTokenTtl);
 
-        String result = jwtService.extractUsername(token);
+        String result = jwtService.extractUserEmail(token);
 
         assertThat(result).isEqualTo(expectedUser);
     }

@@ -108,7 +108,7 @@ public class AuthServiceTest {
         String refreshToken = "refreshToken";
         UserDetails mockUser = mock(UserDetails.class);
         RefreshTokenRequest request = new RefreshTokenRequest("refresh_token");
-        when(jwtService.extractUsername(request.refreshToken())).thenReturn(userEmail);
+        when(jwtService.extractUserEmail(request.refreshToken())).thenReturn(userEmail);
         when(userFacade.findByEmail(userEmail)).thenReturn(mockUser);
         when(jwtService.isTokenValid(request.refreshToken(), mockUser)).thenReturn(true);
         when(jwtService.generateAccessToken(any())).thenReturn(accessToken);
@@ -125,7 +125,7 @@ public class AuthServiceTest {
         String userEmail = "user@email.com";
         UserDetails mockUser = mock(UserDetails.class);
         RefreshTokenRequest request = new RefreshTokenRequest("refresh_token");
-        when(jwtService.extractUsername(request.refreshToken())).thenReturn(userEmail);
+        when(jwtService.extractUserEmail(request.refreshToken())).thenReturn(userEmail);
         when(userFacade.findByEmail(userEmail)).thenReturn(mockUser);
         when(jwtService.isTokenValid(request.refreshToken(), mockUser)).thenReturn(false);
 

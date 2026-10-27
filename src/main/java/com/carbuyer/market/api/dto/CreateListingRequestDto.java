@@ -11,6 +11,6 @@ public record CreateListingRequestDto(
         @NotNull
         @Schema(description = "Unique car id for listing", example = "aeb1430d-f3f9-4bde-a7f1-5abccec356b3")
         UUID carId,
-        @Schema(description = "Positive price for listing", type = "number", format = "double", example = "0.00")
+        @Schema(description = "Positive price for listing", type = "number", format = "double", example = "1.00")
         @NotNull @Positive BigDecimal price
 ) { }

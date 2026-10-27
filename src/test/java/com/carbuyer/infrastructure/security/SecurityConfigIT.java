@@ -67,7 +67,7 @@ public class SecurityConfigIT {
         String email = "test@mail.com";
         UserDetails userDetails = new User(email, "password", Collections.emptyList());
 
-        when(jwtService.extractUsername(token)).thenReturn(email);
+        when(jwtService.extractUserEmail(token)).thenReturn(email);
         when(userDetailsService.loadUserByUsername(email)).thenReturn(userDetails);
         when(jwtService.isTokenValid(token, userDetails)).thenReturn(true);
 
@@ -80,7 +80,7 @@ public class SecurityConfigIT {
     void protectedEndpoint_withInvalidToken_shouldReturn403() throws Exception {
         String token = "invalid_token";
 
-        when(jwtService.extractUsername(token)).thenThrow(new MalformedJwtException("Invalid token"));
+        when(jwtService.extractUserEmail(token)).thenThrow(new MalformedJwtException("Invalid token"));
 
         mockMvc.perform(get("/api/v1/protected/test")
                         .header("Authorization", "Bearer " + token))

@@ -136,6 +136,6 @@ public class MarketController {
     }
 
     private Long getUserId(UserDetails userDetails) {
-        return userFacade.findIdByUsername(userDetails.getUsername());
+        return userFacade.findUserIdByEmail(userDetails.getUsername());
     }
 }

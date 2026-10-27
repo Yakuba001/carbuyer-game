@@ -6,6 +6,11 @@ services:
       - "8080:8080"
     environment:
       - DB_HOST=postgres
+      - JAVA_TOOL_OPTIONS=-Xmx450m -Xms256m
+    deploy:
+      resources:
+        limits:
+          memory: 650M
     depends_on:
         postgres:
           condition: service_healthy
