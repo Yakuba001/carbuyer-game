@@ -3,6 +3,7 @@ package com.carbuyer.exception;
 import com.carbuyer.exception.dto.ErrorResponse;
 import com.carbuyer.exception.exceptions.*;
 import jakarta.persistence.PessimisticLockException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +17,7 @@ import java.time.Instant;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     @ExceptionHandler({
@@ -23,12 +25,9 @@ public class GlobalExceptionHandler {
             NameAlreadyExistsException.class,
             UserAlreadyExistsException.class,
             ObjectOptimisticLockingFailureException.class,
-            PessimisticLockException.class,
-            DataIntegrityViolationException.class})
+            PessimisticLockException.class})
     public ResponseEntity<ErrorResponse> handleConflict(RuntimeException ex) {
         String message = switch (ex) {
-            case DataIntegrityViolationException ignored ->
-                    "Data conflict, the record may already exist or violates system rules";
             case ObjectOptimisticLockingFailureException ignored ->
                     "Concurrent data modification conflict. Please retry.";
             case PessimisticLockException ignored ->
@@ -63,7 +62,7 @@ public class GlobalExceptionHandler {
             InsufficientFundsException.class,
             NoEmptySlotsException.class,
             ChangeCarOwnerException.class})
-    public ResponseEntity<ErrorResponse> handleMissedData(MissedDataException ex) {
+    public ResponseEntity<ErrorResponse> handleMissedData(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorResponse(400, "Bad request", ex.getMessage(), Instant.now()));
     }
@@ -85,5 +84,16 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleUserNotFound(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(new ErrorResponse(404, "Not found", ex.getMessage(), Instant.now()));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleUnexceptedDataIntegrity(DataIntegrityViolationException ex) {
+        log.error("Data integrity violation occurred: ", ex);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse(
+                        400,
+                        "Bad request",
+                        "Violates system integrity rules",
+                        Instant.now()));
     }
 }
