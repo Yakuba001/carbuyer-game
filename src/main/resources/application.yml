@@ -82,11 +82,5 @@ app:
       access-token-ttl-ms: 900000
       refresh-token-ttl-ms: 604800000
 
-  bots:
-    enabled: ${BOTS_ENABLED:true}
-    pool-size: 100
-    min-action-delay-ms: 1000
-    max-action-delay-ms: 5000
-
   finance:
     initial-balance: "1000.00"
