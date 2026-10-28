@@ -2,9 +2,12 @@ package com.carbuyer.exception;
 
 import com.carbuyer.exception.dto.ErrorResponse;
 import com.carbuyer.exception.exceptions.*;
+import jakarta.persistence.PessimisticLockException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -14,26 +17,31 @@ import java.time.Instant;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
     @ExceptionHandler({
             EmailAlreadyExistsException.class,
             NameAlreadyExistsException.class,
             UserAlreadyExistsException.class,
-            DataIntegrityViolationException.class})
+            ObjectOptimisticLockingFailureException.class,
+            PessimisticLockException.class})
     public ResponseEntity<ErrorResponse> handleConflict(RuntimeException ex) {
+        String message = switch (ex) {
+            case ObjectOptimisticLockingFailureException ignored ->
+                    "Concurrent data modification conflict. Please retry.";
+            case PessimisticLockException ignored ->
+                    "The record was updated by another request. Please reload and try again.";
+            default -> ex.getMessage();
+        };
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(new ErrorResponse(409, "Conflict", ex.getMessage(), Instant.now()));
+                .body(new ErrorResponse(409, "Conflict", message, Instant.now()));
     }
 
-    @ExceptionHandler(BadCredentialsException.class)
+    @ExceptionHandler({
+            BadCredentialsException.class,
+            InvalidTokenException.class})
     public ResponseEntity<ErrorResponse> handleBadCredentials(RuntimeException ex) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                .body(new ErrorResponse(401, "Unauthorized", ex.getMessage(), Instant.now()));
-    }
-
-    @ExceptionHandler(InvalidTokenException.class)
-    public ResponseEntity<ErrorResponse> handleInvalidToken(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(new ErrorResponse(401, "Unauthorized", ex.getMessage(), Instant.now()));
     }
@@ -54,7 +62,7 @@ public class GlobalExceptionHandler {
             InsufficientFundsException.class,
             NoEmptySlotsException.class,
             ChangeCarOwnerException.class})
-    public ResponseEntity<ErrorResponse> handleMissedData(MissedDataException ex) {
+    public ResponseEntity<ErrorResponse> handleMissedData(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorResponse(400, "Bad request", ex.getMessage(), Instant.now()));
     }
@@ -76,5 +84,16 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleUserNotFound(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(new ErrorResponse(404, "Not found", ex.getMessage(), Instant.now()));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleUnexceptedDataIntegrity(DataIntegrityViolationException ex) {
+        log.error("Data integrity violation occurred: ", ex);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse(
+                        400,
+                        "Bad request",
+                        "Violates system integrity rules",
+                        Instant.now()));
     }
 }
