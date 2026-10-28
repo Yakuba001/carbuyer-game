@@ -6,11 +6,13 @@ import com.carbuyer.infrastructure.security.dto.LoginRequest;
 import com.carbuyer.infrastructure.security.dto.RefreshTokenRequest;
 import com.carbuyer.infrastructure.security.dto.RegisterRequest;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -26,12 +28,15 @@ public class AuthControllerTest extends BaseIntegrationTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @BeforeEach
+    public void setUp() {
+        restTemplate.getRestTemplate().setRequestFactory(new JdkClientHttpRequestFactory());
+    }
+
     @AfterEach
     public void tearDown() {
         jdbcTemplate.execute("TRUNCATE TABLE users CASCADE");
     }
-
-    // TODO: Check 401/403 Unauthorized/Forbidden.........................................
 
     @Test
     void register_shouldReturn201_whenUserWithThisNameOrEmailDoesNotExistAndRequestWithValidData() {
@@ -83,6 +88,16 @@ public class AuthControllerTest extends BaseIntegrationTest {
     }
 
     @Test
+    void login_shouldReturn401_whenUserWithThisCredentialsDoesNotExist() {
+        LoginRequest loginRequest = new LoginRequest(TEST_EMAIL, TEST_PASSWORD);
+
+        ResponseEntity<AuthResponse> response = restTemplate
+                .postForEntity("/api/v1/auth/login", loginRequest, AuthResponse.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
     void refresh_shouldReturn200_whenUserExistsAndRefreshTokenIsCorrect() {
         String exampleToken = registerUserAndGetHisRefreshToken();
         RefreshTokenRequest refreshTokenRequest = new RefreshTokenRequest(exampleToken);
@@ -118,5 +133,13 @@ public class AuthControllerTest extends BaseIntegrationTest {
 
         assertThat(authResponse).isNotNull();
         return authResponse.refreshToken();
+    }
+
+    @Test
+    void forbiddenAccess_shouldReturn403_whenSomebodyTryVisitLinkHeIsAnonymous() {
+        ResponseEntity<AuthResponse> response = restTemplate
+                .getForEntity("/api/v1/market", AuthResponse.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     }
 }
