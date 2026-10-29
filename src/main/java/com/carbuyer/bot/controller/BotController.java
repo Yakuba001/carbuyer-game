@@ -2,7 +2,6 @@ package com.carbuyer.bot.controller;
 
 import com.carbuyer.bot.dto.StartBotResponse;
 import com.carbuyer.bot.dto.StartBotRequest;
-import com.carbuyer.bot.dto.StopBotResponse;
 import com.carbuyer.bot.service.BotService;
 import com.carbuyer.exception.dto.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -59,35 +58,6 @@ public class BotController {
         StartBotResponse response = botService.startBots(request);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .body(response);
-    }
-
-    @PostMapping("/off")
-    @Operation(
-            summary = "Stopped bots",
-            description = "Thread pool graceful shutdown"
-    )
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Bots successfully stopped",
-                    content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(implementation = StopBotResponse.class)
-                    )),
-            @ApiResponse(responseCode = "401", description = "Unauthorized",
-                    content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(implementation = ErrorResponse.class)
-                    )),
-            @ApiResponse(responseCode = "403", description = "Access denied",
-                    content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(implementation = ErrorResponse.class)
-                    ))
-    })
-    public ResponseEntity<StopBotResponse> botsOff() {
-        StopBotResponse response = botService.stopBots();
-        return ResponseEntity
-                .status(HttpStatus.OK)
                 .body(response);
     }
 }

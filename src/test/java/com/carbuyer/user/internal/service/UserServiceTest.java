@@ -1,7 +1,6 @@
 package com.carbuyer.user.internal.service;
 
-import com.carbuyer.exception.exceptions.UserAlreadyExistsException;
-import com.carbuyer.exception.exceptions.UserNotFoundException;
+import com.carbuyer.exception.exceptions.*;
 import com.carbuyer.user.api.dto.CreateUserCommand;
 import com.carbuyer.user.api.dto.UserDto;
 import com.carbuyer.user.api.event.UserCreatedEvent;
@@ -19,6 +18,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -62,6 +62,28 @@ public class UserServiceTest {
 
         verify(userRepository).saveAndFlush(any(User.class));
         verify(applicationEventPublisher).publishEvent(any(UserCreatedEvent.class));
+    }
+
+    @Test
+    void createUser_shouldThrowInvalidBotDataException_whenUserTryAddedReservedWordsInHisName() {
+        CreateUserCommand cmd = new CreateUserCommand("CarBuyerBot", "email", "password");
+
+        assertThatThrownBy(() -> userService.createUser(cmd))
+                .isInstanceOf(InvalidBotDataException.class);
+
+        verifyNoInteractions(userRepository);
+        verifyNoInteractions(applicationEventPublisher);
+    }
+
+    @Test
+    void createUser_shouldThrowInvalidBotDataException_whenUserTryAddedReservedDomainInHisEmail() {
+        CreateUserCommand cmd = new CreateUserCommand("name", "@carbuyer.com", "password");
+
+        assertThatThrownBy(() -> userService.createUser(cmd))
+                .isInstanceOf(InvalidBotDataException.class);
+
+        verifyNoInteractions(userRepository);
+        verifyNoInteractions(applicationEventPublisher);
     }
 
     @Test
@@ -162,9 +184,9 @@ public class UserServiceTest {
 
     @Test
     void carPurchase_shouldThrownException_whenSellerDoesNotExists() {
-        BigDecimal testAmount =  new BigDecimal("228.21");
+        BigDecimal testAmount = new BigDecimal("228.21");
         BigDecimal buyerBalance = new BigDecimal("228.21");
-        BigDecimal sellerBalance =  new BigDecimal("228.21");
+        BigDecimal sellerBalance = new BigDecimal("228.21");
         long buyerId = 1L;
         long sellerId = 2L;
         when(userBalanceRepository.updateBalance(eq(buyerId), any(BigDecimal.class))).thenReturn(1);
@@ -176,9 +198,9 @@ public class UserServiceTest {
 
     @Test
     void carPurchase_shouldReturnTrue_whenBuyerHasEnoughAmountInBalanceAndSellerExists() {
-        BigDecimal testAmount =  new BigDecimal("228.21");
+        BigDecimal testAmount = new BigDecimal("228.21");
         BigDecimal buyerBalance = new BigDecimal("228.21");
-        BigDecimal sellerBalance =  new BigDecimal("228.21");
+        BigDecimal sellerBalance = new BigDecimal("228.21");
         long buyerId = 1L;
         long sellerId = 2L;
         when(userBalanceRepository.updateBalance(eq(buyerId), any(BigDecimal.class))).thenReturn(1);
@@ -187,5 +209,72 @@ public class UserServiceTest {
         boolean result = userService.carPurchase(buyerId, sellerId, buyerBalance, sellerBalance, testAmount);
 
         assertThat(result).isTrue();
+    }
+
+    @Test
+    void createUsers_shouldCreateUsers_whenMethodGetCorrectData() {
+        User stubUser1 = new User("name", "email", "password");
+        User stubUser2 = new User("name1", "email1", "password");
+        CreateUserCommand cmd1 =
+                new CreateUserCommand(stubUser1.getName(), stubUser1.getEmail(), stubUser1.getPassword());
+        CreateUserCommand cmd2 =
+                new CreateUserCommand(stubUser2.getName(), stubUser2.getEmail(), stubUser2.getPassword());
+        List<User> stubUsers = List.of(stubUser1, stubUser2);
+        UserBalance stubBalance = new UserBalance(new BigDecimal("11.11"));
+        stubUsers.getFirst().setBalance(stubBalance);
+        stubUsers.getLast().setBalance(stubBalance);
+        when(userRepository.saveAllAndFlush(anyCollection())).thenReturn(stubUsers);
+
+       userService.createUsers(List.of(cmd1, cmd2));
+
+        verify(userRepository).saveAllAndFlush(anyCollection());
+        verify(applicationEventPublisher, times(stubUsers.size())).publishEvent(any(UserCreatedEvent.class));
+    }
+
+    @Test
+    void createUsers_shouldThrowEmailAlreadyExistsException_whenEmailAlreadyExistsInDb() {
+        CreateUserCommand cmd = new CreateUserCommand("name", "@g.com", "password");
+        List<CreateUserCommand> stubUsers = List.of(cmd);
+        when(userRepository.saveAllAndFlush(anyCollection())).thenThrow(EmailAlreadyExistsException.class);
+
+        assertThatThrownBy(() -> userService.createUsers(stubUsers))
+                .isInstanceOf(EmailAlreadyExistsException.class);
+
+        verifyNoInteractions(applicationEventPublisher);
+    }
+
+    @Test
+    void createUsers_shouldThrowNameAlreadyExistsException_whenNameAlreadyExistsInDb() {
+        CreateUserCommand cmd = new CreateUserCommand("name", "@g.com", "password");
+        List<CreateUserCommand> stubUsers = List.of(cmd);
+        when(userRepository.saveAllAndFlush(anyCollection())).thenThrow(NameAlreadyExistsException.class);
+
+        assertThatThrownBy(() -> userService.createUsers(stubUsers))
+                .isInstanceOf(NameAlreadyExistsException.class);
+
+        verifyNoInteractions(applicationEventPublisher);
+    }
+
+    @Test
+    void createUsers_shouldThrowUserAlreadyExistsException_whenSomethingWentWrong() {
+        CreateUserCommand cmd = new CreateUserCommand("name", "@g.com", "password");
+        List<CreateUserCommand> stubUsers = List.of(cmd);
+        when(userRepository.saveAllAndFlush(anyCollection())).thenThrow(UserAlreadyExistsException.class);
+
+        assertThatThrownBy(() -> userService.createUsers(stubUsers))
+                .isInstanceOf(UserAlreadyExistsException.class);
+
+        verifyNoInteractions(applicationEventPublisher);
+    }
+
+    @Test
+    void countingExistingBots_shouldReturnCorrectNumberOfExistingBots() {
+        when(userRepository.countByEmailEndingWith("@carbuyer.com")).thenReturn(1L);
+
+        long result = userService.countingExistingBots("@carbuyer.com");
+
+        assertThat(result).isEqualTo(1L);
+
+        verifyNoInteractions(applicationEventPublisher);
     }
 }

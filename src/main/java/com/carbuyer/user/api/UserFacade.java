@@ -3,6 +3,7 @@ package com.carbuyer.user.api;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 public interface UserFacade {
 
@@ -18,4 +19,6 @@ public interface UserFacade {
                         BigDecimal buyerBalance,
                         BigDecimal sellerBalance,
                         BigDecimal amount);
+    void addBots(List<String> names, List<String> emails, List<String> passwords);
+    long countingExistingBots(String botsDomain);
 }

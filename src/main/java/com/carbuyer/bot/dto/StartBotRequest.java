@@ -1,10 +1,7 @@
 package com.carbuyer.bot.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.*;
 
 public record StartBotRequest(
         @NotNull
@@ -12,6 +9,10 @@ public record StartBotRequest(
         @Min(1)
         @Max(999)
         @Schema(description = "Start bot amount with borders from 1 to 999", example = "100")
-        int amount
+        int amount,
+        @NotBlank
+        @Size(min = 8, max = 255)
+        @Schema(description = "Set example password for future bots", example = "12345678")
+        String botPassword
 ) {
 }

@@ -61,7 +61,8 @@ public class GlobalExceptionHandler {
             SelfBuyingException.class,
             InsufficientFundsException.class,
             NoEmptySlotsException.class,
-            ChangeCarOwnerException.class})
+            ChangeCarOwnerException.class,
+            InvalidBotDataException.class})
     public ResponseEntity<ErrorResponse> handleMissedData(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorResponse(400, "Bad request", ex.getMessage(), Instant.now()));

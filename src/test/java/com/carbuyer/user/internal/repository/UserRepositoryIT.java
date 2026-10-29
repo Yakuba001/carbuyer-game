@@ -87,6 +87,18 @@ public class UserRepositoryIT extends DataJpaIntegrationTest {
         assertThat(user.isPresent()).isTrue();
     }
 
+    @Test
+    void countByEmailEndingWith_returnsCorrectValue_whenUsersWithThisDomainExists() {
+        String testDomain = "@carbuyer.com";
+        addUserToDb("Joe", "a@gmail.com", "test");
+        addUserToDb("Ben", "ben@carbuyer.com", "test");
+        addUserToDb("Bob", "bob@carbuyer.com", "test");
+
+        long result = userRepository.countByEmailEndingWith(testDomain);
+
+        assertThat(result).isEqualTo(2);
+    }
+
     private void addUserToDb(String name, String email, String password) {
         User savedUser = new User(name, email, password);
         userRepository.save(savedUser);
