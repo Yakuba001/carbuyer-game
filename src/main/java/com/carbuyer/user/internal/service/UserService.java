@@ -1,9 +1,6 @@
 package com.carbuyer.user.internal.service;
 
-import com.carbuyer.exception.exceptions.EmailAlreadyExistsException;
-import com.carbuyer.exception.exceptions.NameAlreadyExistsException;
-import com.carbuyer.exception.exceptions.UserAlreadyExistsException;
-import com.carbuyer.exception.exceptions.UserNotFoundException;
+import com.carbuyer.exception.exceptions.*;
 import com.carbuyer.user.api.dto.CreateUserCommand;
 import com.carbuyer.user.api.dto.UserDto;
 import com.carbuyer.user.api.event.UserCreatedEvent;
@@ -20,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Service
 @Transactional(readOnly = true)
@@ -34,32 +32,44 @@ public class UserService {
 
     @Transactional
     public UserDto createUser(CreateUserCommand command) {
+        validateInputData(command);
         User newUser = new User(command.name(), command.email(), command.rawPassword());
         UserBalance newBalance = new UserBalance(initialBalance);
         newUser.setBalance(newBalance);
-        User savedUser;
         try {
-            savedUser = userRepository.saveAndFlush(newUser);
+            User savedUser = userRepository.saveAndFlush(newUser);
+            applicationEventPublisher.publishEvent(new UserCreatedEvent(savedUser.getId(), savedUser.getMaxSlots()));
+            return new UserDto(
+                    savedUser.getId(),
+                    savedUser.getName(),
+                    savedUser.getEmail(),
+                    savedUser.getBalance().getBalance(),
+                    savedUser.getMaxSlots(),
+                    savedUser.getCreatedAt());
         } catch (DataIntegrityViolationException e) {
-            if (e.getCause() instanceof ConstraintViolationException err) {
-                String constraintName = err.getConstraintName();
-                if ("users_email_key".equals(constraintName)) {
-                    throw new EmailAlreadyExistsException("Email already exists");
-                }
-                if ("users_name_key".equals(constraintName)) {
-                    throw new NameAlreadyExistsException("Name already exists");
-                }
-            }
-            throw new UserAlreadyExistsException("User data conflict");
+            dataBaseExceptionResolver(e);
+            throw e;
         }
-        applicationEventPublisher.publishEvent(new UserCreatedEvent(savedUser.getId(), savedUser.getMaxSlots()));
-        return new UserDto(
-                savedUser.getId(),
-                savedUser.getName(),
-                savedUser.getEmail(),
-                savedUser.getBalance().getBalance(),
-                savedUser.getMaxSlots(),
-                savedUser.getCreatedAt());
+    }
+
+    @Transactional
+    public void createUsers(List<CreateUserCommand> commands) {
+        List<User> users = commands.stream()
+                .map(cmd -> {
+                    User newUser = new User(cmd.name(), cmd.email(), cmd.rawPassword());
+                    UserBalance newBalance = new UserBalance(initialBalance);
+                    newUser.setBalance(newBalance);
+                    return newUser;
+                })
+                .toList();
+        try {
+            List<User> savedUsers = userRepository.saveAllAndFlush(users);
+            savedUsers.forEach(user ->
+                    applicationEventPublisher.publishEvent(new UserCreatedEvent(user.getId(), user.getMaxSlots())));
+        } catch (DataIntegrityViolationException e) {
+            dataBaseExceptionResolver(e);
+            throw e;
+        }
     }
 
     public boolean isUserExistsByEmail(String email) {
@@ -104,5 +114,31 @@ public class UserService {
             throw new UserNotFoundException("User with this id: " + sellerId + " does not exists");
         }
         return true;
+    }
+
+    public long countingExistingBots(String botsDomain) {
+        return userRepository.countByEmailEndingWith(botsDomain);
+    }
+
+    private void dataBaseExceptionResolver(DataIntegrityViolationException ex) {
+        if (ex.getCause() instanceof ConstraintViolationException err) {
+            String constraintName = err.getConstraintName();
+            if ("users_email_key".equals(constraintName)) {
+                throw new EmailAlreadyExistsException("Email already exists");
+            }
+            if ("users_name_key".equals(constraintName)) {
+                throw new NameAlreadyExistsException("Name already exists");
+            }
+        }
+        throw new UserAlreadyExistsException("User data conflict");
+    }
+
+    private void validateInputData(CreateUserCommand command) {
+        if (command.name() != null && command.name().startsWith("CarBuyerBot")) {
+            throw new InvalidBotDataException("Username cannot start with system bot prefix");
+        }
+        if (command.email() != null && command.email().endsWith("@carbuyer.com")) {
+            throw new InvalidBotDataException("Email domain is reserved for system bots");
+        }
     }
 }

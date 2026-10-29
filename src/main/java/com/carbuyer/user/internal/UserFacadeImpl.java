@@ -10,6 +10,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.util.AbstractList;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -67,5 +69,29 @@ public class UserFacadeImpl implements UserFacade {
                                BigDecimal sellerBalance,
                                BigDecimal amount) {
         return service.carPurchase(userId, sellerId, buyerBalance, sellerBalance, amount);
+    }
+
+    @Override
+    public void addBots(List<String> names, List<String> emails, List<String> passwords) {
+        int size = names.size();
+        service.createUsers(new AbstractList<>() {
+            @Override
+            public CreateUserCommand get(int index) {
+                if (index < 0 || index >= size) {
+                    throw new IndexOutOfBoundsException();
+                }
+                return new CreateUserCommand(names.get(index), emails.get(index), passwords.get(index));
+            }
+
+            @Override
+            public int size() {
+                return size;
+            }
+        });
+    }
+
+    @Override
+    public long countingExistingBots(String botsDomain) {
+        return service.countingExistingBots(botsDomain);
     }
 }

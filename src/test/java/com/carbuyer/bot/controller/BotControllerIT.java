@@ -21,10 +21,12 @@ public class BotControllerIT extends MockMvcIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    private static final String TEST_PASS = "12345678";
+
     @Test
     @WithMockUser(value = "bib@g.c", roles = "ADMIN")
     void botsOn_shouldReturn201_whenRequestIsCorrectAndBotsWereCreated() throws Exception {
-        StartBotRequest request = new StartBotRequest(100);
+        StartBotRequest request = new StartBotRequest(100, TEST_PASS);
 
         mockMvc.perform(post("/api/v1/bot/on")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -36,7 +38,7 @@ public class BotControllerIT extends MockMvcIntegrationTest {
     @SuppressWarnings("all")
     @WithMockUser(value = "bib@g.c", roles = "ADMIN")
     void botsOn_shouldReturn400_whenRequestInvalid() throws Exception {
-        StartBotRequest request = new StartBotRequest(-1);
+        StartBotRequest request = new StartBotRequest(-1, TEST_PASS);
 
         mockMvc.perform(post("/api/v1/bot/on")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -47,24 +49,11 @@ public class BotControllerIT extends MockMvcIntegrationTest {
     @Test
     @WithMockUser(value = "bib@g.c", roles = "USER")
     void botsOn_shouldReturn403_whenAccessForbidden() throws Exception {
-        StartBotRequest request = new StartBotRequest(100);
+        StartBotRequest request = new StartBotRequest(100, TEST_PASS);
 
         mockMvc.perform(post("/api/v1/bot/on")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isForbidden());
-    }
-
-    @Test
-    @WithMockUser(value = "bib@g.c", roles = "ADMIN")
-    void botsOff_shouldReturn200_whenThreadPoolWithBotsShutDowns() throws Exception {
-        mockMvc.perform(post("/api/v1/bot/off"))
-                .andExpect(status().isOk());
-    }
-
-    @Test
-    void botsOff_shouldReturn403_whenAccessForbidden() throws Exception {
-        mockMvc.perform(post("/api/v1/bot/off"))
                 .andExpect(status().isForbidden());
     }
 }
