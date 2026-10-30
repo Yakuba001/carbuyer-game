@@ -33,6 +33,13 @@ public class User implements UserDetails {
     @Setter
     @Column(name = "max_slots")
     private Integer maxSlots = 1;
+    @Setter
+    @Column(name = "is_bot")
+    private boolean isBot = false;
+    @Setter
+    @Column(name = "is_bot_active")
+    private boolean isBotActive = false;
+    @Setter
     @Version
     @Column(nullable = false)
     private Long version = 0L;

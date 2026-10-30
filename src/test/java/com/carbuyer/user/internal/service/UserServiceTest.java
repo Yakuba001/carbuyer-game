@@ -212,9 +212,13 @@ public class UserServiceTest {
     }
 
     @Test
-    void createUsers_shouldCreateUsers_whenMethodGetCorrectData() {
+    void createUsers_shouldCreateUsersAndSetUserIsBotTrueAndIsBotActiveTrue_whenMethodGetCorrectData() {
         User stubUser1 = new User("name", "email", "password");
+        stubUser1.setBot(true);
+        stubUser1.setBotActive(true);
         User stubUser2 = new User("name1", "email1", "password");
+        stubUser2.setBot(true);
+        stubUser2.setBotActive(true);
         CreateUserCommand cmd1 =
                 new CreateUserCommand(stubUser1.getName(), stubUser1.getEmail(), stubUser1.getPassword());
         CreateUserCommand cmd2 =
@@ -225,7 +229,12 @@ public class UserServiceTest {
         stubUsers.getLast().setBalance(stubBalance);
         when(userRepository.saveAllAndFlush(anyCollection())).thenReturn(stubUsers);
 
-       userService.createUsers(List.of(cmd1, cmd2));
+        userService.createUsers(List.of(cmd1, cmd2));
+
+        assertThat(stubUser1.isBot()).isTrue();
+        assertThat(stubUser1.isBotActive()).isTrue();
+        assertThat(stubUser2.isBot()).isTrue();
+        assertThat(stubUser2.isBotActive()).isTrue();
 
         verify(userRepository).saveAllAndFlush(anyCollection());
         verify(applicationEventPublisher, times(stubUsers.size())).publishEvent(any(UserCreatedEvent.class));
@@ -268,13 +277,38 @@ public class UserServiceTest {
     }
 
     @Test
-    void countingExistingBots_shouldReturnCorrectNumberOfExistingBots() {
-        when(userRepository.countByEmailEndingWith("@carbuyer.com")).thenReturn(1L);
+    void getNumberOfActiveBots_shouldReturnCorrectNumberOfActiveBots_whenActiveBotsExists() {
+        long amount = 1L;
+        when(userRepository.countByIsBotTrueAndIsBotActiveTrue()).thenReturn(amount);
 
-        long result = userService.countingExistingBots("@carbuyer.com");
+        long result = userService.getNumberOfActiveBots();
 
-        assertThat(result).isEqualTo(1L);
+        assertThat(result).isEqualTo(amount);
+    }
 
-        verifyNoInteractions(applicationEventPublisher);
+    @Test
+    void getNumberOfInActiveBots_shouldReturnCorrectNumberOfInActiveBots_whenInActiveBotsExists() {
+        long amount = 1L;
+        when(userRepository.countByIsBotTrueAndIsBotActiveFalse()).thenReturn(amount);
+
+        long result = userService.getNumberOfInActiveBots();
+
+        assertThat(result).isEqualTo(amount);
+    }
+
+    @Test
+    void botActivator_shouldThrowBotActivateException_whenRepositoryReturnsZero() {
+        when(userRepository.activateBots(anyLong())).thenThrow(BotActivateException.class);
+
+        assertThatThrownBy(() -> userService.botActivator(anyLong()))
+                .isInstanceOf(BotActivateException.class);
+    }
+
+    @Test
+    void botDeactivator_shouldThrowBotDeactivateException_whenRepositoryReturnsZero() {
+        when(userRepository.deactivateBots(anyLong())).thenThrow(BotDeactivateException.class);
+
+        assertThatThrownBy(() -> userService.botDeactivator(anyLong()))
+                .isInstanceOf(BotDeactivateException.class);
     }
 }

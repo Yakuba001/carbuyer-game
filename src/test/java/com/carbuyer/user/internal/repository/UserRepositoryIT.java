@@ -2,6 +2,7 @@ package com.carbuyer.user.internal.repository;
 
 import com.carbuyer.containers.DataJpaIntegrationTest;
 import com.carbuyer.user.internal.entity.User;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -20,11 +21,17 @@ public class UserRepositoryIT extends DataJpaIntegrationTest {
 
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private EntityManager entityManager;
+
+    private static final String TEST_USERNAME = "User";
+    private static final String TEST_PASSWORD = "password";
+    private static final String TEST_EMAIL = "email@g.com";
 
     @ParameterizedTest
     @MethodSource(value = "duplicateCheckerUsers")
     void checkUniqueNameEmailFields_shouldThrowDataViolationException_whenFieldsUnUnique(User user) {
-        addUserToDb("test", "test", "test");
+        addUserToDb("test", "test");
 
         assertThatThrownBy(() -> userRepository.save(user)).isInstanceOf(DataIntegrityViolationException.class);
     }
@@ -37,7 +44,7 @@ public class UserRepositoryIT extends DataJpaIntegrationTest {
 
     @Test
     void checkDefaultsAmounts_shouldSetIdMaxSlotsVersionCreatedAt_whenUserAdded() {
-        User user = new User("test", "test", "test");
+        User user = new User(TEST_USERNAME, TEST_EMAIL, TEST_PASSWORD);
 
         User savedUser = userRepository.save(user);
 
@@ -49,58 +56,102 @@ public class UserRepositoryIT extends DataJpaIntegrationTest {
 
     @Test
     void existsByEmail_shouldReturnTrue_whenUserWithThisEmailExists() {
-        String email = "test";
-        addUserToDb("test", email, "test5");
+        addUserToDb(TEST_USERNAME, TEST_EMAIL);
 
-        boolean result = userRepository.existsByEmail(email);
+        boolean result = userRepository.existsByEmail(TEST_EMAIL);
 
         assertThat(result).isTrue();
     }
 
     @Test
     void existsByName_shouldReturnTrue_whenUserWithThisNameExists() {
-        String name = "test";
-        addUserToDb(name, "test", "test6");
+        addUserToDb(TEST_USERNAME, TEST_EMAIL);
 
-        boolean result = userRepository.existsByName(name);
+        boolean result = userRepository.existsByName(TEST_USERNAME);
 
         assertThat(result).isTrue();
     }
 
     @Test
     void findByEmail_shouldReturnExistingUser() {
-        String email = "test";
-        addUserToDb("test", email, "test");
+        addUserToDb(TEST_USERNAME, TEST_EMAIL);
 
-        Optional<User> user = userRepository.findByEmail(email);
+        Optional<User> user = userRepository.findByEmail(TEST_EMAIL);
 
         assertThat(user.isPresent()).isTrue();
     }
 
     @Test
     void findByName_shouldReturnExistingUser() {
-        String name = "test";
-        addUserToDb(name, "test", "test");
+        addUserToDb(TEST_USERNAME, TEST_EMAIL);
 
-        Optional<User> user = userRepository.findByName(name);
+        Optional<User> user = userRepository.findByName(TEST_USERNAME);
 
         assertThat(user.isPresent()).isTrue();
     }
 
     @Test
-    void countByEmailEndingWith_returnsCorrectValue_whenUsersWithThisDomainExists() {
-        String testDomain = "@carbuyer.com";
-        addUserToDb("Joe", "a@gmail.com", "test");
-        addUserToDb("Ben", "ben@carbuyer.com", "test");
-        addUserToDb("Bob", "bob@carbuyer.com", "test");
+    void countByIsBotTrueAndIsBotActiveTrue_shouldReturnAmountOfActiveBots_whenThisBotsExistsInDb() {
+        User savedUser = new User(TEST_USERNAME, TEST_EMAIL, TEST_PASSWORD);
+        savedUser.setBot(true);
+        savedUser.setBotActive(true);
+        addUserToDb("Bill", "cosby@gmail.com");
+        userRepository.save(savedUser);
 
-        long result = userRepository.countByEmailEndingWith(testDomain);
+        long result = userRepository.countByIsBotTrueAndIsBotActiveTrue();
 
-        assertThat(result).isEqualTo(2);
+        assertThat(result).isEqualTo(1);
     }
 
-    private void addUserToDb(String name, String email, String password) {
-        User savedUser = new User(name, email, password);
+    @Test
+    void countByIsBotTrueAndIsBotActiveFalse_shouldReturnAmountOfInActiveBots_whenThisBotsExistsInDb() {
+        User savedUser = new User(TEST_USERNAME, TEST_EMAIL, TEST_PASSWORD);
+        savedUser.setBot(true);
+        addUserToDb("Bill", "cosby@gmail.com");
+        userRepository.save(savedUser);
+
+        long result = userRepository.countByIsBotTrueAndIsBotActiveFalse();
+
+        assertThat(result).isEqualTo(1);
+    }
+
+    @Test
+    void activateBots_shouldSwitchIsBotActiveFromFalseToTrue_whenAmountOfBotsWithActivateFalseExistsInDb() {
+        long amount = 1L;
+        User savedUser = new User(TEST_USERNAME, TEST_EMAIL, TEST_PASSWORD);
+        savedUser.setBot(true);
+        userRepository.save(savedUser);
+
+        userRepository.activateBots(amount);
+        entityManager.flush();
+        entityManager.clear();
+
+        User resultUser = userRepository.findByName(TEST_USERNAME).orElse(null);
+        assertThat(resultUser).isNotNull();
+
+        assertThat(resultUser.isBotActive()).isTrue();
+    }
+
+    @Test
+    void deactivateBots_shouldSwitchIsBotActiveFromFalseToTrue_whenAmountOfBotsWithDeactivateFalseExistsInDb() {
+        long amount = 1L;
+        User savedUser = new User(TEST_USERNAME, TEST_EMAIL, TEST_PASSWORD);
+        savedUser.setBot(true);
+        savedUser.setBotActive(true);
+        userRepository.save(savedUser);
+
+        userRepository.deactivateBots(amount);
+        entityManager.flush();
+        entityManager.clear();
+
+        User resultUser = userRepository.findByName(TEST_USERNAME).orElse(null);
+        assertThat(resultUser).isNotNull();
+
+        assertThat(resultUser.isBotActive()).isFalse();
+    }
+
+    private void addUserToDb(String name, String email) {
+        User savedUser = new User(name, email, TEST_PASSWORD);
         userRepository.save(savedUser);
     }
 
