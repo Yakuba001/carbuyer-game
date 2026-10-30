@@ -5,6 +5,8 @@ CREATE TABLE users
     email           VARCHAR(255) NOT NULL UNIQUE,
     password_hash   VARCHAR(255) NOT NULL,
     max_slots       INTEGER DEFAULT 1,
+    is_bot          BOOLEAN DEFAULT FALSE,
+    is_bot_active   BOOLEAN DEFAULT FALSE,
     version         BIGINT DEFAULT 0 NOT NULL,
     created_at      TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
@@ -62,6 +64,13 @@ CREATE TABLE market_listings
     CONSTRAINT check_anti_self_buy CHECK (buyer_id IS NULL OR seller_id <> buyer_id)
 );
 
+CREATE TABLE bot_config
+(
+    id              INTEGER PRIMARY KEY DEFAULT 1,
+    total_bots      INTEGER DEFAULT 0 NOT NULL,
+    CONSTRAINT      check_single_row CHECK (id = 1)
+);
+
 ALTER SEQUENCE garage_slots_id_seq OWNED BY garage_slots.id;
 
 CREATE INDEX idx_garage_slots_user_status ON garage_slots (user_id, status);
@@ -69,3 +78,5 @@ CREATE UNIQUE INDEX idx_garage_slots_car_unique ON garage_slots (car_id) WHERE c
 
 CREATE INDEX idx_market_listings_feed ON market_listings (created_at DESC) WHERE status = 'ACTIVE';
 CREATE UNIQUE INDEX idx_market_listings_one_active_car ON market_listings (car_id) WHERE status = 'ACTIVE';
+
+INSERT INTO bot_config (id, total_bots) VALUES (1, 0);

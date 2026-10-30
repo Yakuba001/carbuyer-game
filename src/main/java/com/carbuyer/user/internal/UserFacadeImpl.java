@@ -91,7 +91,22 @@ public class UserFacadeImpl implements UserFacade {
     }
 
     @Override
-    public long countingExistingBots(String botsDomain) {
-        return service.countingExistingBots(botsDomain);
+    public long getNumberOfAllInActiveBots() {
+        return service.getNumberOfInActiveBots();
+    }
+
+    @Override
+    public long getNumberOfActiveBots() {
+        return service.getNumberOfActiveBots();
+    }
+
+    @Override
+    public void activateBots(long amount) {
+        service.botActivator(amount);
+    }
+
+    @Override
+    public void deactivateBots(long amount) {
+        service.botDeactivator(amount);
     }
 }

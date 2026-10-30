@@ -4,5 +4,5 @@ import com.carbuyer.containers.BaseIntegrationTest;
 
 public class BotServiceIT extends BaseIntegrationTest {
 
-    // TODO: check how bots are created
+    // TODO: test how bots management work in concurrency environment and what happened in real time modules interactions
 }

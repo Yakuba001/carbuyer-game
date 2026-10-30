@@ -59,6 +59,8 @@ public class UserService {
                     User newUser = new User(cmd.name(), cmd.email(), cmd.rawPassword());
                     UserBalance newBalance = new UserBalance(initialBalance);
                     newUser.setBalance(newBalance);
+                    newUser.setBot(true);
+                    newUser.setBotActive(true);
                     return newUser;
                 })
                 .toList();
@@ -116,8 +118,22 @@ public class UserService {
         return true;
     }
 
-    public long countingExistingBots(String botsDomain) {
-        return userRepository.countByEmailEndingWith(botsDomain);
+    public long getNumberOfActiveBots() {
+        return userRepository.countByIsBotTrueAndIsBotActiveTrue();
+    }
+
+    public long getNumberOfInActiveBots() {
+        return userRepository.countByIsBotTrueAndIsBotActiveFalse();
+    }
+
+    public void botActivator(long amount) {
+        int result = userRepository.activateBots(amount);
+        if (result == 0) throw new BotActivateException("Bot activation failed");
+    }
+
+    public void botDeactivator(long amount) {
+        int result = userRepository.deactivateBots(amount);
+        if (result == 0) throw new BotDeactivateException("Bot deactivation failed");
     }
 
     private void dataBaseExceptionResolver(DataIntegrityViolationException ex) {

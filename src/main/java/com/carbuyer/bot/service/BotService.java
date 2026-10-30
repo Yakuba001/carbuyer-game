@@ -2,6 +2,9 @@ package com.carbuyer.bot.service;
 
 import com.carbuyer.bot.dto.StartBotResponse;
 import com.carbuyer.bot.dto.StartBotRequest;
+import com.carbuyer.bot.entity.BotConfig;
+import com.carbuyer.bot.repository.BotConfigRepository;
+import com.carbuyer.exception.exceptions.BotConfigNotFoundException;
 import com.carbuyer.user.api.UserFacade;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -10,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.AbstractList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -24,28 +28,40 @@ public class BotService implements AutoCloseable {
 
     private final PasswordEncoder passwordEncoder;
     private final UserFacade userFacade;
+    private final BotConfigRepository botConfigRepository;
 
     @Transactional
     public StartBotResponse startBots(StartBotRequest request) {
+        BotConfig config = botConfigRepository.findAndLock()
+                .orElseThrow(() -> new BotConfigNotFoundException("Bot config not found"));
         int amount = request.amount();
-        long currentAmount = userFacade.countingExistingBots(BOTS_DOMAIN);
-        if (amount < currentAmount) {
-            return new StartBotResponse(BOTS_ENABLED, (int) currentAmount);
-        } else if (amount == currentAmount) {
+        long currentNumberActiveBots = userFacade.getNumberOfActiveBots();
+        long currentNumberInActiveBots = 0;
+        if (amount < currentNumberActiveBots) {
+            deactivateBots(currentNumberActiveBots - amount);
             return new StartBotResponse(BOTS_ENABLED, amount);
-        } else if (amount > currentAmount) {
-            int diff = (int) (amount - currentAmount);
-
-            // TODO: create a guaranties if bots exists with some names/emails,
-            //  new execution won`t create bots with same email/name, to avoid conflict, maybe try get map by bot prefix name,
-            //  sorted and check the highest index,
-            //  after that just start from that index added some new bots to avoid conflicts or something like this.....
-
-            userFacade.addBots(
-                    uniqueNamesGenerator(diff),
-                    uniqueEmailsGenerator(diff),
-                    uniqueAndEncodedPasswordGenerator(diff, request.botPassword()));
+        } else if (amount == currentNumberActiveBots) {
+            return new StartBotResponse(BOTS_ENABLED, amount);
+        } else if (amount > currentNumberActiveBots) {
+            currentNumberInActiveBots = userFacade.getNumberOfAllInActiveBots();
+            int diff = amount - (int) (currentNumberActiveBots + currentNumberInActiveBots);
+            if (diff > 0) {
+                if (currentNumberInActiveBots > 0) {
+                    activateBots(currentNumberInActiveBots);
+                }
+                userFacade.addBots(
+                        uniqueNamesGenerator(diff),
+                        uniqueEmailsGenerator(diff),
+                        uniqueAndEncodedPasswordGenerator(diff, request.botPassword()));
+            } else {
+                if (currentNumberInActiveBots > diff) {
+                    activateBots(currentNumberInActiveBots - diff);
+                }
+            }
         }
+        int totalBots = amount > currentNumberActiveBots + currentNumberInActiveBots ? amount :
+                (int) (currentNumberActiveBots + currentNumberInActiveBots);
+        config.setTotalBots(totalBots);
         return new StartBotResponse(BOTS_ENABLED, amount);
     }
 
@@ -67,7 +83,7 @@ public class BotService implements AutoCloseable {
             @Override
             public String get(int index) {
                 checkSizeBoundaries(index, amount);
-                return "CarBuyerBot" + index;
+                return "CarBuyerBot" + saltGenerator();
             }
 
             @Override
@@ -82,7 +98,7 @@ public class BotService implements AutoCloseable {
             @Override
             public String get(int index) {
                 checkSizeBoundaries(index, amount);
-                return "email" + index + BOTS_DOMAIN;
+                return "email" + saltGenerator() + BOTS_DOMAIN;
             }
 
             @Override
@@ -97,7 +113,7 @@ public class BotService implements AutoCloseable {
             @Override
             public String get(int index) {
                 checkSizeBoundaries(index, amount);
-                return passwordEncoder.encode(password + index);
+                return passwordEncoder.encode(password + saltGenerator());
             }
 
             @Override
@@ -111,5 +127,17 @@ public class BotService implements AutoCloseable {
         if (index < 0 || index >= amount) {
             throw new IndexOutOfBoundsException();
         }
+    }
+
+    private String saltGenerator() {
+        return UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+    }
+
+    private void activateBots(long amount) {
+        userFacade.activateBots(amount);
+    }
+
+    private void deactivateBots(long amount) {
+        userFacade.deactivateBots(amount);
     }
 }

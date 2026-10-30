@@ -11,7 +11,7 @@ public record StartBotRequest(
         @Schema(description = "Start bot amount with borders from 1 to 999", example = "100")
         int amount,
         @NotBlank
-        @Size(min = 8, max = 255)
+        @Size(min = 8, max = 247)
         @Schema(description = "Set example password for future bots", example = "12345678")
         String botPassword
 ) {
