@@ -278,37 +278,48 @@ public class UserServiceTest {
 
     @Test
     void getNumberOfActiveBots_shouldReturnCorrectNumberOfActiveBots_whenActiveBotsExists() {
-        long amount = 1L;
+        int amount = 1;
         when(userRepository.countByIsBotTrueAndIsBotActiveTrue()).thenReturn(amount);
 
-        long result = userService.getNumberOfActiveBots();
+        int result = userService.getNumberOfActiveBots();
 
         assertThat(result).isEqualTo(amount);
     }
 
     @Test
     void getNumberOfInActiveBots_shouldReturnCorrectNumberOfInActiveBots_whenInActiveBotsExists() {
-        long amount = 1L;
+        int amount = 1;
         when(userRepository.countByIsBotTrueAndIsBotActiveFalse()).thenReturn(amount);
 
-        long result = userService.getNumberOfInActiveBots();
+        int result = userService.getNumberOfInActiveBots();
 
         assertThat(result).isEqualTo(amount);
     }
 
     @Test
     void botActivator_shouldThrowBotActivateException_whenRepositoryReturnsZero() {
-        when(userRepository.activateBots(anyLong())).thenThrow(BotActivateException.class);
+        when(userRepository.activateBots(anyInt())).thenThrow(BotActivateException.class);
 
-        assertThatThrownBy(() -> userService.botActivator(anyLong()))
+        assertThatThrownBy(() -> userService.botActivator(anyInt()))
                 .isInstanceOf(BotActivateException.class);
     }
 
     @Test
     void botDeactivator_shouldThrowBotDeactivateException_whenRepositoryReturnsZero() {
-        when(userRepository.deactivateBots(anyLong())).thenThrow(BotDeactivateException.class);
+        when(userRepository.deactivateBots(anyInt())).thenThrow(BotDeactivateException.class);
 
-        assertThatThrownBy(() -> userService.botDeactivator(anyLong()))
+        assertThatThrownBy(() -> userService.botDeactivator(anyInt()))
                 .isInstanceOf(BotDeactivateException.class);
+    }
+
+    @Test
+    void getActiveBotIdsWithLimit_shouldReturnCorrectBotIdsWithLimit_whenSuchIdsExists() {
+        List<Long> exampleIds = List.of(1L, 2L, 3L);
+        int limit = 3;
+        when(userRepository.findActiveBotIdsWithLimit(anyInt())).thenReturn(exampleIds);
+
+        List<Long> result = userService.getActiveBotIdsWithLimit(limit);
+
+        assertThat(result).isEqualTo(exampleIds);
     }
 }

@@ -5,6 +5,7 @@ import com.carbuyer.car.internal.service.CarService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -21,5 +22,10 @@ public class CarFacadeImpl implements CarFacade {
     @Override
     public boolean setNewCarOwner(Long sellerId, Long buyerId, UUID carId) {
         return service.changeCarOwner(sellerId, buyerId, carId);
+    }
+
+    @Override
+    public void addCarsByIds(List<Long> ownerIds) {
+        service.addCarsAndSetNewOwners(ownerIds);
     }
 }

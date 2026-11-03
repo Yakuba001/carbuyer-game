@@ -20,8 +20,9 @@ public interface UserFacade {
                         BigDecimal sellerBalance,
                         BigDecimal amount);
     void addBots(List<String> names, List<String> emails, List<String> passwords);
-    long getNumberOfAllInActiveBots();
-    long getNumberOfActiveBots();
-    void activateBots(long amount);
-    void deactivateBots(long amount);
+    int getNumberOfInActiveBots();
+    int getNumberOfActiveBots();
+    void activateBots(int amount);
+    void deactivateBots(int amount);
+    List<Long> getActiveBotIdsWithLimit(int limit);
 }

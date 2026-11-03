@@ -6,6 +6,7 @@ import com.carbuyer.bot.repository.BotConfigRepository;
 import com.carbuyer.containers.BaseIntegrationTest;
 import com.carbuyer.user.api.UserFacade;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,7 +45,9 @@ public class BotServiceIT extends BaseIntegrationTest {
         jdbcTemplate.execute("TRUNCATE TABLE bot_config CASCADE");
     }
 
+    // TODO: rebuild test with new features from target method
     @Test
+    @Order(1)
     void startBots_shouldCorrectAddedSwitchOnAndSwitchBotOffs_whenEnvironmentIsConcurrency() {
         Phaser phaser = new Phaser(threadCount + 1);
         try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
@@ -78,7 +81,7 @@ public class BotServiceIT extends BaseIntegrationTest {
 
         BotConfig config = botServiceITComponent.getBotConfig();
         long activeBots = userFacade.getNumberOfActiveBots();
-        long inActiveBots = userFacade.getNumberOfAllInActiveBots();
+        long inActiveBots = userFacade.getNumberOfInActiveBots();
 
         assertThat(config).isNotNull();
         assertThat(config.getTotalBots()).isEqualTo(START_AMOUNT);
@@ -94,7 +97,7 @@ public class BotServiceIT extends BaseIntegrationTest {
 
         BotConfig config = botServiceITComponent.getBotConfig();
         long activeBots = userFacade.getNumberOfActiveBots();
-        long inActiveBots = userFacade.getNumberOfAllInActiveBots();
+        long inActiveBots = userFacade.getNumberOfInActiveBots();
 
         assertThat(config).isNotNull();
         assertThat(config.getTotalBots()).isEqualTo(NEW_MORE_THAN_ACTIVE_AMOUNT);
@@ -113,7 +116,7 @@ public class BotServiceIT extends BaseIntegrationTest {
 
         BotConfig config = botServiceITComponent.getBotConfig();
         long activeBots = userFacade.getNumberOfActiveBots();
-        long inActiveBots = userFacade.getNumberOfAllInActiveBots();
+        long inActiveBots = userFacade.getNumberOfInActiveBots();
 
         assertThat(config).isNotNull();
         assertThat(config.getTotalBots()).isEqualTo(NEW_MORE_THAN_ACTIVE_AMOUNT);

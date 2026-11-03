@@ -118,22 +118,26 @@ public class UserService {
         return true;
     }
 
-    public long getNumberOfActiveBots() {
+    public int getNumberOfActiveBots() {
         return userRepository.countByIsBotTrueAndIsBotActiveTrue();
     }
 
-    public long getNumberOfInActiveBots() {
+    public int getNumberOfInActiveBots() {
         return userRepository.countByIsBotTrueAndIsBotActiveFalse();
     }
 
-    public void botActivator(long amount) {
+    public void botActivator(int amount) {
         int result = userRepository.activateBots(amount);
         if (result == 0) throw new BotActivateException("Bot activation failed");
     }
 
-    public void botDeactivator(long amount) {
+    public void botDeactivator(int amount) {
         int result = userRepository.deactivateBots(amount);
         if (result == 0) throw new BotDeactivateException("Bot deactivation failed");
+    }
+
+    public List<Long> getActiveBotIdsWithLimit(int limit) {
+        return userRepository.findActiveBotIdsWithLimit(limit);
     }
 
     private void dataBaseExceptionResolver(DataIntegrityViolationException ex) {
