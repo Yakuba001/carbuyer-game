@@ -4,16 +4,18 @@ import com.carbuyer.bot.dto.StartBotResponse;
 import com.carbuyer.bot.dto.StartBotRequest;
 import com.carbuyer.bot.entity.BotConfig;
 import com.carbuyer.bot.repository.BotConfigRepository;
+import com.carbuyer.car.api.CarFacade;
 import com.carbuyer.exception.exceptions.BotConfigNotFoundException;
+import com.carbuyer.garage.api.GarageFacade;
 import com.carbuyer.user.api.UserFacade;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.AbstractList;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -29,25 +31,30 @@ public class BotService implements AutoCloseable {
     private final PasswordEncoder passwordEncoder;
     private final UserFacade userFacade;
     private final BotConfigRepository botConfigRepository;
+    private final CarFacade carFacade;
+    private final GarageFacade garageFacade;
 
     @Transactional
     public StartBotResponse startBots(StartBotRequest request) {
         BotConfig config = botConfigRepository.findAndLock()
                 .orElseThrow(() -> new BotConfigNotFoundException("Bot config not found"));
         int amount = request.amount();
-        long currentNumberActiveBots = userFacade.getNumberOfActiveBots();
-        long currentNumberInActiveBots = 0;
+        int currentNumberActiveBots = userFacade.getNumberOfActiveBots();
+        int currentNumberInActiveBots;
         if (amount < currentNumberActiveBots) {
-            deactivateBots(currentNumberActiveBots - amount);
+            currentNumberActiveBots = currentNumberActiveBots - amount;
+            userFacade.deactivateBots(currentNumberActiveBots);
+            // TODO: when bots becomes inActive - should change garageSlotStatus to empty and set carId null and deleteCarFromDb
+            carOwnersRatioController(currentNumberActiveBots);
             return new StartBotResponse(BOTS_ENABLED, amount);
         } else if (amount == currentNumberActiveBots) {
             return new StartBotResponse(BOTS_ENABLED, amount);
-        } else if (amount > currentNumberActiveBots) {
-            currentNumberInActiveBots = userFacade.getNumberOfAllInActiveBots();
-            int diff = amount - (int) (currentNumberActiveBots + currentNumberInActiveBots);
+        } else {
+            currentNumberInActiveBots = userFacade.getNumberOfInActiveBots();
+            int diff = amount - (currentNumberActiveBots + currentNumberInActiveBots);
             if (diff > 0) {
                 if (currentNumberInActiveBots > 0) {
-                    activateBots(currentNumberInActiveBots);
+                    userFacade.activateBots(currentNumberInActiveBots);
                 }
                 userFacade.addBots(
                         uniqueNamesGenerator(diff),
@@ -55,13 +62,14 @@ public class BotService implements AutoCloseable {
                         uniqueAndEncodedPasswordGenerator(diff, request.botPassword()));
             } else {
                 if (currentNumberInActiveBots > diff) {
-                    activateBots(currentNumberInActiveBots - diff);
+                    userFacade.activateBots(currentNumberInActiveBots - diff);
                 }
             }
         }
-        int totalBots = amount > currentNumberActiveBots + currentNumberInActiveBots ? amount :
-                (int) (currentNumberActiveBots + currentNumberInActiveBots);
+        int totalBots = Math.max(amount, currentNumberActiveBots + currentNumberInActiveBots);
         config.setTotalBots(totalBots);
+        currentNumberActiveBots = userFacade.getNumberOfActiveBots();
+        carOwnersRatioController(currentNumberActiveBots);
         return new StartBotResponse(BOTS_ENABLED, amount);
     }
 
@@ -76,6 +84,24 @@ public class BotService implements AutoCloseable {
             THREAD_POOL.shutdownNow();
             Thread.currentThread().interrupt();
         }
+    }
+
+    private void carOwnersRatioController(int allActiveBots) {
+        List<Long> idsList = userFacade.getActiveBotIdsWithLimit(allActiveBots);
+        int amountActiveBotsWithEmptyGarageSlot = idsList.size();
+        int halfSize = amountActiveBotsWithEmptyGarageSlot / 2;
+        List<Long> halfList;
+        int diff = amountActiveBotsWithEmptyGarageSlot - allActiveBots;
+        if (diff == 0) {
+            halfList = idsList.subList(0, halfSize);
+        } else if (diff > 0) {
+            // TODO: solve it its just stubbing
+            halfList = idsList.subList(0, halfSize);
+        } else {
+            // TODO: solve it its just stubbing
+            halfList = idsList.subList(0, halfSize);
+        }
+        carFacade.addCarsByIds(halfList);
     }
 
     private List<String> uniqueNamesGenerator(int amount) {
@@ -130,14 +156,6 @@ public class BotService implements AutoCloseable {
     }
 
     private String saltGenerator() {
-        return UUID.randomUUID().toString().replace("-", "").substring(0, 8);
-    }
-
-    private void activateBots(long amount) {
-        userFacade.activateBots(amount);
-    }
-
-    private void deactivateBots(long amount) {
-        userFacade.deactivateBots(amount);
+        return RandomStringUtils.randomAlphanumeric(8);
     }
 }

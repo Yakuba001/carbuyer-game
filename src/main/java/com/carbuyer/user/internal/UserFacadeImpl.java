@@ -91,22 +91,27 @@ public class UserFacadeImpl implements UserFacade {
     }
 
     @Override
-    public long getNumberOfAllInActiveBots() {
+    public int getNumberOfInActiveBots() {
         return service.getNumberOfInActiveBots();
     }
 
     @Override
-    public long getNumberOfActiveBots() {
+    public int getNumberOfActiveBots() {
         return service.getNumberOfActiveBots();
     }
 
     @Override
-    public void activateBots(long amount) {
+    public void activateBots(int amount) {
         service.botActivator(amount);
     }
 
     @Override
-    public void deactivateBots(long amount) {
+    public void deactivateBots(int amount) {
         service.botDeactivator(amount);
+    }
+
+    @Override
+    public List<Long> getActiveBotIdsWithLimit(int limit) {
+        return service.getActiveBotIdsWithLimit(limit);
     }
 }

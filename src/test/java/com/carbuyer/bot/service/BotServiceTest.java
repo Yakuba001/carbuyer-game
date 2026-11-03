@@ -4,6 +4,7 @@ import com.carbuyer.bot.dto.StartBotRequest;
 import com.carbuyer.bot.dto.StartBotResponse;
 import com.carbuyer.bot.entity.BotConfig;
 import com.carbuyer.bot.repository.BotConfigRepository;
+import com.carbuyer.car.api.CarFacade;
 import com.carbuyer.exception.exceptions.BotConfigNotFoundException;
 import com.carbuyer.user.api.UserFacade;
 import org.junit.jupiter.api.Test;
@@ -28,11 +29,14 @@ public class BotServiceTest {
     private BotConfigRepository botConfigRepository;
     @InjectMocks
     private BotService botService;
+    @Mock
+    private CarFacade carFacade;
 
     private static final String TEST_PASSWORD = "12345678";
     private static final int TEST_AMOUNT = 10;
     private static final String ENABLED = "Enabled";
 
+    // TODO: rebuild tests with new features from target method
     @Test
     void startBots_shouldThrowBotConfigNotFoundException_whenBotConfigNotFound() {
         StartBotRequest request = new StartBotRequest(TEST_AMOUNT, TEST_PASSWORD);
@@ -47,9 +51,10 @@ public class BotServiceTest {
         BotConfig config = new BotConfig();
         config.setTotalBots(TEST_AMOUNT);
         when(botConfigRepository.findAndLock()).thenReturn(Optional.of(config));
-        when(userFacade.getNumberOfActiveBots()).thenReturn(0L);
-        when(userFacade.getNumberOfAllInActiveBots()).thenReturn(0L);
+        when(userFacade.getNumberOfActiveBots()).thenReturn(0);
+        when(userFacade.getNumberOfInActiveBots()).thenReturn(0);
         doNothing().when(userFacade).addBots(anyList(), anyList(), anyList());
+        doNothing().when(carFacade).addCarsByIds(anyList());
 
         StartBotResponse resultDto = botService.startBots(request);
 
@@ -57,19 +62,20 @@ public class BotServiceTest {
         assertThat(resultDto.status()).isEqualTo(ENABLED);
         assertThat(resultDto.amount()).isEqualTo(TEST_AMOUNT);
 
-        verify(userFacade).getNumberOfActiveBots();
-        verify(userFacade).getNumberOfAllInActiveBots();
+        verify(userFacade, times(2)).getNumberOfActiveBots();
+        verify(userFacade).getNumberOfInActiveBots();
         verify(userFacade).addBots(anyList(), anyList(), anyList());
     }
 
     @Test
     void startBots_shouldReturnCorrectDto_whenAmountLowerThanActive() {
-        long activeBots = 15;
+        int activeBots = 15;
         StartBotRequest request = new StartBotRequest(TEST_AMOUNT, TEST_PASSWORD);
         BotConfig config = new BotConfig();
-        config.setTotalBots((int) activeBots);
+        config.setTotalBots(activeBots);
         when(botConfigRepository.findAndLock()).thenReturn(Optional.of(config));
         when(userFacade.getNumberOfActiveBots()).thenReturn(activeBots);
+        doNothing().when(carFacade).addCarsByIds(anyList());
 
         StartBotResponse resultDto = botService.startBots(request);
 
@@ -77,7 +83,7 @@ public class BotServiceTest {
         assertThat(resultDto.status()).isEqualTo(ENABLED);
         assertThat(resultDto.amount()).isEqualTo(TEST_AMOUNT);
 
-        verify(userFacade, never()).getNumberOfAllInActiveBots();
+        verify(userFacade, never()).getNumberOfInActiveBots();
         verify(userFacade, never()).addBots(anyList(), anyList(), anyList());
     }
 
@@ -87,7 +93,7 @@ public class BotServiceTest {
         BotConfig config = new BotConfig();
         config.setTotalBots(TEST_AMOUNT);
         when(botConfigRepository.findAndLock()).thenReturn(Optional.of(config));
-        when(userFacade.getNumberOfActiveBots()).thenReturn((long) TEST_AMOUNT);
+        when(userFacade.getNumberOfActiveBots()).thenReturn(TEST_AMOUNT);
 
         StartBotResponse resultDto = botService.startBots(request);
 
@@ -95,21 +101,22 @@ public class BotServiceTest {
         assertThat(resultDto.status()).isEqualTo(ENABLED);
         assertThat(resultDto.amount()).isEqualTo(TEST_AMOUNT);
 
-        verify(userFacade, never()).getNumberOfAllInActiveBots();
+        verify(userFacade, never()).getNumberOfInActiveBots();
         verify(userFacade, never()).addBots(anyList(), anyList(), anyList());
     }
 
     @Test
     void startBots_shouldReturnCorrectDto_whenSumOfActiveAndNotActiveMoreThanAmountInRequest() {
         int testAmount = 20;
-        long testActiveBots = 5;
-        long testInActiveBots = 15;
+        int testActiveBots = 5;
+        int testInActiveBots = 15;
         StartBotRequest request = new StartBotRequest(TEST_AMOUNT, TEST_PASSWORD);
         BotConfig config = new BotConfig();
         config.setTotalBots(testAmount);
         when(botConfigRepository.findAndLock()).thenReturn(Optional.of(config));
         when(userFacade.getNumberOfActiveBots()).thenReturn(testActiveBots);
-        when(userFacade.getNumberOfAllInActiveBots()).thenReturn(testInActiveBots);
+        when(userFacade.getNumberOfInActiveBots()).thenReturn(testInActiveBots);
+        doNothing().when(carFacade).addCarsByIds(anyList());
 
         StartBotResponse resultDto = botService.startBots(request);
 
