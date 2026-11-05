@@ -8,7 +8,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
-import java.util.Objects;
 
 @Entity
 @Table(name = "users")
@@ -36,9 +35,6 @@ public class User implements UserDetails {
     @Setter
     @Column(name = "is_bot")
     private boolean isBot = false;
-    @Setter
-    @Column(name = "is_bot_active")
-    private boolean isBotActive = false;
     @Setter
     @Version
     @Column(nullable = false)

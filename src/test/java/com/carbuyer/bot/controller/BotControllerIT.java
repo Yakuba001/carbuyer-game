@@ -1,15 +1,16 @@
 package com.carbuyer.bot.controller;
 
-import com.carbuyer.bot.dto.StartBotRequest;
+import com.carbuyer.bot.dto.StartBotResponse;
 import com.carbuyer.containers.MockMvcIntegrationTest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -21,39 +22,28 @@ public class BotControllerIT extends MockMvcIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    private static final String TEST_PASS = "12345678";
-
+    // TODO: Rebuild this
     @Test
     @WithMockUser(value = "bib@g.c", roles = "ADMIN")
     void botsOn_shouldReturn201_whenRequestIsCorrectAndBotsWereCreated() throws Exception {
-        StartBotRequest request = new StartBotRequest(100, TEST_PASS);
+        String expectedStatus = "Bots enabled";
 
-        mockMvc.perform(post("/api/v1/bot/on")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isCreated());
-    }
+        MvcResult response = mockMvc.perform(post("/api/v1/bot/on"))
+                .andExpect(status().isCreated())
+                .andReturn();
 
-    @Test
-    @SuppressWarnings("all")
-    @WithMockUser(value = "bib@g.c", roles = "ADMIN")
-    void botsOn_shouldReturn400_whenRequestInvalid() throws Exception {
-        StartBotRequest request = new StartBotRequest(-1, TEST_PASS);
+        StartBotResponse startBotResponse = objectMapper.readValue(
+                response.getResponse().getContentAsString(),
+                StartBotResponse.class);
+        String result = startBotResponse.status();
 
-        mockMvc.perform(post("/api/v1/bot/on")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
+        assertThat(result).isEqualTo(expectedStatus);
     }
 
     @Test
     @WithMockUser(value = "bib@g.c", roles = "USER")
     void botsOn_shouldReturn403_whenAccessForbidden() throws Exception {
-        StartBotRequest request = new StartBotRequest(100, TEST_PASS);
-
-        mockMvc.perform(post("/api/v1/bot/on")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+        mockMvc.perform(post("/api/v1/bot/on"))
                 .andExpect(status().isForbidden());
     }
 }

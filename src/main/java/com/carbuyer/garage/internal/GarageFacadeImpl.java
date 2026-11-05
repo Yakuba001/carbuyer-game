@@ -5,6 +5,7 @@ import com.carbuyer.garage.internal.service.GarageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -14,8 +15,8 @@ class GarageFacadeImpl implements GarageFacade {
     private final GarageService service;
 
     @Override
-    public Long getGarageSlotIdWithEmptyStatus(Long userId, String status) {
-        return service.getGarageSlotIdWithEmptyStatus(userId, status);
+    public Long getGarageSlotIdByUserIdAndStatus(Long userId, String status) {
+        return service.getGarageSlotIdByUserIdAndStatus(userId, status);
     }
 
     @Override
@@ -31,6 +32,21 @@ class GarageFacadeImpl implements GarageFacade {
                 emptyGarageSlotId,
                 sellerGarageSlotId,
                 carId);
+    }
+
+    @Override
+    public void changeEmptyGarageSlotStatusAndSetInItCarId(List<Long> userIds, List<UUID> carIds) {
+        service.changeGarageSlotStatusAndSetCarInItByCarIds(userIds, carIds);
+    }
+
+    @Override
+    public void addGarageSlot(Long userId, int slotNumber) {
+        service.addGarageSlot(userId, slotNumber);
+    }
+
+    @Override
+    public void addGarageSlots(List<Long> userIds) {
+        service.addGarageSlots(userIds);
     }
 
 }

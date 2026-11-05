@@ -12,6 +12,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -165,12 +166,38 @@ public class GarageSlotRepositoryIT extends DataJpaIntegrationTest {
         assertThat(result).isEqualTo(expectedResult);
     }
 
+    @Test
+    void findEmptySlotsForUpdate_shouldReturnGarageSlotsList_whenUsersHasEmptySlots() {
+        int inputUserIdsAmount = 20;
+        List<Long> userIds = new ArrayList<>(inputUserIdsAmount);
+        List<GarageSlot> garageSlots = new ArrayList<>(inputUserIdsAmount);
+        for (int i = 0; i < inputUserIdsAmount; i++) {
+            userIds.add((long) i);
+            addUserToDb(userIds.get(i), "name" + i, "email@g.c" + i);
+            if (i == 0) {
+                garageSlots.add(new GarageSlot(userIds.get(i), TEST_SLOT_NUMBER, null, GarageSlotStatus.OCCUPIED));
+            } else garageSlots.add(new GarageSlot(userIds.get(i), TEST_SLOT_NUMBER, null, GarageSlotStatus.EMPTY));
+        }
+        garageSlotRepository.saveAllAndFlush(garageSlots);
+
+        List<GarageSlot> resultList = garageSlotRepository.findEmptySlotsForUpdate(userIds);
+
+        assertThat(resultList.size()).isEqualTo(inputUserIdsAmount - 1);
+    }
+
     private static Stream<GarageSlot> objWithNullElements() {
         return Stream.of(
                 new GarageSlot(null, TEST_SLOT_NUMBER, TEST_CAR_ID, GarageSlotStatus.EMPTY),
                 new GarageSlot(TEST_USER_ID, null, TEST_CAR_ID, GarageSlotStatus.EMPTY),
                 new GarageSlot(TEST_USER_ID, TEST_SLOT_NUMBER, TEST_CAR_ID, null)
         );
+    }
+
+    private void addUserToDb(Long userId, String userName, String email) {
+        String defaultPass = "12345678";
+        jdbcTemplate.update("INSERT INTO users (id, name, email, password_hash) OVERRIDING SYSTEM VALUE " +
+                        "VALUES (?, ?, ?, ?)",
+                userId, userName, email, defaultPass);
     }
 
     private void addUserToDb() {

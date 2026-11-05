@@ -17,8 +17,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service
 @RequiredArgsConstructor
@@ -47,6 +50,19 @@ public class MarketService {
                 savedListing.getPrice(),
                 savedListing.getStatus().toString(),
                 savedListing.getCreatedAt());
+    }
+
+    @Transactional
+    public void createListings(List<Long> sellerIds, List<UUID> carIds) {
+        if (sellerIds.size() != carIds.size()) {
+            throw new MissedDataException("Amount of sellerIds and carIds don't match");
+        }
+        List<BigDecimal> prices = priceGenerator(sellerIds.size());
+        List<MarketListing> listings = new ArrayList<>(sellerIds.size());
+        for (int i = 0; i < sellerIds.size(); i++) {
+            listings.add(new MarketListing(carIds.get(i), sellerIds.get(i), null, prices.get(i)));
+        }
+        repository.saveAll(listings);
     }
 
     @Transactional
@@ -99,14 +115,14 @@ public class MarketService {
         Long emptyGarageSlotId, sellerGarageSlotId;
         if (firstIdForBlocking.equals(buyerId)) {
             buyerBalance = userFacade.getUserBalanceById(firstIdForBlocking);
-            emptyGarageSlotId = garageFacade.getGarageSlotIdWithEmptyStatus(buyerId, EMPTY_GARAGE_SLOT);
+            emptyGarageSlotId = garageFacade.getGarageSlotIdByUserIdAndStatus(buyerId, EMPTY_GARAGE_SLOT);
             sellerBalance = userFacade.getUserBalanceById(secondIdForBlocking);
             sellerGarageSlotId = garageFacade.getSellerGarageSlotId(sellerId, carId);
         } else {
             sellerBalance = userFacade.getUserBalanceById(firstIdForBlocking);
             sellerGarageSlotId = garageFacade.getSellerGarageSlotId(sellerId, carId);
             buyerBalance = userFacade.getUserBalanceById(secondIdForBlocking);
-            emptyGarageSlotId = garageFacade.getGarageSlotIdWithEmptyStatus(buyerId, EMPTY_GARAGE_SLOT);
+            emptyGarageSlotId = garageFacade.getGarageSlotIdByUserIdAndStatus(buyerId, EMPTY_GARAGE_SLOT);
         }
         if (buyerBalance.compareTo(listing.getPrice()) < 0) {
             throw new InsufficientFundsException("You don`t have enough funds");
@@ -122,5 +138,15 @@ public class MarketService {
         listing.setBuyerId(buyerId);
         listing.setClosedAt(Instant.now());
         repository.save(listing);
+    }
+
+    private List<BigDecimal> priceGenerator(int size) {
+        double lowerBound = 100.00;
+        double upperBound = 1000.00;
+        List<BigDecimal> priceList = new ArrayList<>(size);
+        for (int i = 0; i < size; i++) {
+            priceList.add(new BigDecimal(ThreadLocalRandom.current().nextDouble(lowerBound, upperBound)));
+        }
+        return priceList;
     }
 }

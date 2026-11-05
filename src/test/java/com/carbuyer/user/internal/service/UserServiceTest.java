@@ -1,9 +1,8 @@
 package com.carbuyer.user.internal.service;
 
 import com.carbuyer.exception.exceptions.*;
+import com.carbuyer.garage.api.GarageFacade;
 import com.carbuyer.user.api.dto.CreateUserCommand;
-import com.carbuyer.user.api.dto.UserDto;
-import com.carbuyer.user.api.event.UserCreatedEvent;
 import com.carbuyer.user.internal.entity.User;
 import com.carbuyer.user.internal.entity.UserBalance;
 import com.carbuyer.user.internal.repository.UserBalanceRepository;
@@ -13,11 +12,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,12 +34,14 @@ public class UserServiceTest {
     @Mock
     private UserBalanceRepository userBalanceRepository;
     @Mock
-    private ApplicationEventPublisher applicationEventPublisher;
+    private GarageFacade garageFacade;
+    @Mock
+    private PasswordEncoder passwordEncoder;
     @InjectMocks
     private UserService userService;
 
     @Test
-    void createUser_ShouldThrowException_WhenEmailOrNameIsTaken() {
+    void createUser_shouldThrowException_whenEmailOrNameIsTaken() {
         when(userRepository.saveAndFlush(any(User.class)))
                 .thenThrow(new DataIntegrityViolationException("Duplicate entry"));
 
@@ -48,20 +50,21 @@ public class UserServiceTest {
                 .isInstanceOf(UserAlreadyExistsException.class);
 
         verify(userRepository).saveAndFlush(any(User.class));
-        verify(applicationEventPublisher, never()).publishEvent(any());
+        verifyNoInteractions(garageFacade);
     }
 
     @Test
-    void createUser_ShouldSuccess_WhenDataIsValid() {
+    void createUser_shouldSuccess_whenDataIsValid() {
         User stubUser = new User("name", "email", "password");
         UserBalance stubBalance = new UserBalance(new BigDecimal("11.11"));
         stubUser.setBalance(stubBalance);
         when(userRepository.saveAndFlush(any(User.class))).thenReturn(stubUser);
+        doNothing().when(garageFacade).addGarageSlot(any(), anyInt());
 
         userService.createUser(new CreateUserCommand("name", "email", "password"));
 
         verify(userRepository).saveAndFlush(any(User.class));
-        verify(applicationEventPublisher).publishEvent(any(UserCreatedEvent.class));
+        verify(garageFacade).addGarageSlot(any(), anyInt());
     }
 
     @Test
@@ -72,7 +75,6 @@ public class UserServiceTest {
                 .isInstanceOf(InvalidBotDataException.class);
 
         verifyNoInteractions(userRepository);
-        verifyNoInteractions(applicationEventPublisher);
     }
 
     @Test
@@ -83,7 +85,6 @@ public class UserServiceTest {
                 .isInstanceOf(InvalidBotDataException.class);
 
         verifyNoInteractions(userRepository);
-        verifyNoInteractions(applicationEventPublisher);
     }
 
     @Test
@@ -128,27 +129,6 @@ public class UserServiceTest {
 
         assertThat(result).isFalse();
         verify(userRepository).existsByName(notExistingUsername);
-    }
-
-    @Test
-    void save_shouldReturnSavedUserWithCorrectData() {
-        String name = "name";
-        String email = "email";
-        String password = "password";
-        long fakeId = 1L;
-        CreateUserCommand savedUserCommand = new CreateUserCommand(name, email, password);
-        User savedUser = new User(savedUserCommand.name(), savedUserCommand.email(), savedUserCommand.rawPassword());
-        ReflectionTestUtils.setField(savedUser, "id", fakeId);
-        UserBalance fakeBalance = new UserBalance(new BigDecimal("0.00"));
-        savedUser.setBalance(fakeBalance);
-        when(userRepository.saveAndFlush(any(User.class))).thenReturn(savedUser);
-
-        UserDto result = userService.createUser(savedUserCommand);
-
-        assertThat(result.id()).isEqualTo(fakeId);
-        assertThat(result.name()).isEqualTo(name);
-        assertThat(result.email()).isEqualTo(email);
-        verify(userRepository).saveAndFlush(any(User.class));
     }
 
     @Test
@@ -212,114 +192,27 @@ public class UserServiceTest {
     }
 
     @Test
-    void createUsers_shouldCreateUsersAndSetUserIsBotTrueAndIsBotActiveTrue_whenMethodGetCorrectData() {
-        User stubUser1 = new User("name", "email", "password");
-        stubUser1.setBot(true);
-        stubUser1.setBotActive(true);
-        User stubUser2 = new User("name1", "email1", "password");
-        stubUser2.setBot(true);
-        stubUser2.setBotActive(true);
-        CreateUserCommand cmd1 =
-                new CreateUserCommand(stubUser1.getName(), stubUser1.getEmail(), stubUser1.getPassword());
-        CreateUserCommand cmd2 =
-                new CreateUserCommand(stubUser2.getName(), stubUser2.getEmail(), stubUser2.getPassword());
-        List<User> stubUsers = List.of(stubUser1, stubUser2);
-        UserBalance stubBalance = new UserBalance(new BigDecimal("11.11"));
-        stubUsers.getFirst().setBalance(stubBalance);
-        stubUsers.getLast().setBalance(stubBalance);
-        when(userRepository.saveAllAndFlush(anyCollection())).thenReturn(stubUsers);
+    void createUsers_shouldReturnCorrectIdsList_whenUsersAreCreated() {
+        int amount = 2;
+        List<User> savedUsers = new ArrayList<>(amount);
+        for (int i = 0; i < amount; i++) {
+            User currUser = new User("name" + i, "email" + i, "password");
+            ReflectionTestUtils.setField(currUser, "id", (long) i);
+            savedUsers.add(currUser);
+        }
+        when(passwordEncoder.encode(anyString())).thenReturn("password");
+        when(userRepository.saveAllAndFlush(anyList())).thenReturn(savedUsers);
+        doNothing().when(garageFacade).addGarageSlots(anyList());
 
-        userService.createUsers(List.of(cmd1, cmd2));
+        List<Long> resultList = userService.createUsers(amount);
 
-        assertThat(stubUser1.isBot()).isTrue();
-        assertThat(stubUser1.isBotActive()).isTrue();
-        assertThat(stubUser2.isBot()).isTrue();
-        assertThat(stubUser2.isBotActive()).isTrue();
-
-        verify(userRepository).saveAllAndFlush(anyCollection());
-        verify(applicationEventPublisher, times(stubUsers.size())).publishEvent(any(UserCreatedEvent.class));
+        assertThat(resultList.size()).isEqualTo(amount);
     }
 
     @Test
-    void createUsers_shouldThrowEmailAlreadyExistsException_whenEmailAlreadyExistsInDb() {
-        CreateUserCommand cmd = new CreateUserCommand("name", "@g.com", "password");
-        List<CreateUserCommand> stubUsers = List.of(cmd);
-        when(userRepository.saveAllAndFlush(anyCollection())).thenThrow(EmailAlreadyExistsException.class);
+    void createUsers_shouldThrowException_whenEmailOrNameIsTaken() {
+        when(userRepository.saveAllAndFlush(anyList())).thenThrow(new DataIntegrityViolationException(""));
 
-        assertThatThrownBy(() -> userService.createUsers(stubUsers))
-                .isInstanceOf(EmailAlreadyExistsException.class);
-
-        verifyNoInteractions(applicationEventPublisher);
-    }
-
-    @Test
-    void createUsers_shouldThrowNameAlreadyExistsException_whenNameAlreadyExistsInDb() {
-        CreateUserCommand cmd = new CreateUserCommand("name", "@g.com", "password");
-        List<CreateUserCommand> stubUsers = List.of(cmd);
-        when(userRepository.saveAllAndFlush(anyCollection())).thenThrow(NameAlreadyExistsException.class);
-
-        assertThatThrownBy(() -> userService.createUsers(stubUsers))
-                .isInstanceOf(NameAlreadyExistsException.class);
-
-        verifyNoInteractions(applicationEventPublisher);
-    }
-
-    @Test
-    void createUsers_shouldThrowUserAlreadyExistsException_whenSomethingWentWrong() {
-        CreateUserCommand cmd = new CreateUserCommand("name", "@g.com", "password");
-        List<CreateUserCommand> stubUsers = List.of(cmd);
-        when(userRepository.saveAllAndFlush(anyCollection())).thenThrow(UserAlreadyExistsException.class);
-
-        assertThatThrownBy(() -> userService.createUsers(stubUsers))
-                .isInstanceOf(UserAlreadyExistsException.class);
-
-        verifyNoInteractions(applicationEventPublisher);
-    }
-
-    @Test
-    void getNumberOfActiveBots_shouldReturnCorrectNumberOfActiveBots_whenActiveBotsExists() {
-        int amount = 1;
-        when(userRepository.countByIsBotTrueAndIsBotActiveTrue()).thenReturn(amount);
-
-        int result = userService.getNumberOfActiveBots();
-
-        assertThat(result).isEqualTo(amount);
-    }
-
-    @Test
-    void getNumberOfInActiveBots_shouldReturnCorrectNumberOfInActiveBots_whenInActiveBotsExists() {
-        int amount = 1;
-        when(userRepository.countByIsBotTrueAndIsBotActiveFalse()).thenReturn(amount);
-
-        int result = userService.getNumberOfInActiveBots();
-
-        assertThat(result).isEqualTo(amount);
-    }
-
-    @Test
-    void botActivator_shouldThrowBotActivateException_whenRepositoryReturnsZero() {
-        when(userRepository.activateBots(anyInt())).thenThrow(BotActivateException.class);
-
-        assertThatThrownBy(() -> userService.botActivator(anyInt()))
-                .isInstanceOf(BotActivateException.class);
-    }
-
-    @Test
-    void botDeactivator_shouldThrowBotDeactivateException_whenRepositoryReturnsZero() {
-        when(userRepository.deactivateBots(anyInt())).thenThrow(BotDeactivateException.class);
-
-        assertThatThrownBy(() -> userService.botDeactivator(anyInt()))
-                .isInstanceOf(BotDeactivateException.class);
-    }
-
-    @Test
-    void getActiveBotIdsWithLimit_shouldReturnCorrectBotIdsWithLimit_whenSuchIdsExists() {
-        List<Long> exampleIds = List.of(1L, 2L, 3L);
-        int limit = 3;
-        when(userRepository.findActiveBotIdsWithLimit(anyInt())).thenReturn(exampleIds);
-
-        List<Long> result = userService.getActiveBotIdsWithLimit(limit);
-
-        assertThat(result).isEqualTo(exampleIds);
+        assertThatThrownBy(() -> userService.createUsers(1)).isInstanceOf(UserAlreadyExistsException.class);
     }
 }

@@ -20,6 +20,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -153,7 +154,7 @@ public class MarketServiceTest {
         when(carFacade.isCarOwner(any(UUID.class), anyLong())).thenReturn(true);
         when(userFacade.getUserBalanceById(buyerId)).thenReturn(buyerBalance);
         when(userFacade.getUserBalanceById(sellerId)).thenReturn(sellerBalance);
-        when(garageFacade.getGarageSlotIdWithEmptyStatus(eq(buyerId), any())).thenReturn(buyerGarageSlotId);
+        when(garageFacade.getGarageSlotIdByUserIdAndStatus(eq(buyerId), any())).thenReturn(buyerGarageSlotId);
         when(garageFacade.getSellerGarageSlotId(eq(sellerId), any(UUID.class))).thenReturn(sellerGarageSlotId);
         when(userFacade.carPurchase(
                 anyLong(),
@@ -278,5 +279,28 @@ public class MarketServiceTest {
 
         assertThatThrownBy(() -> service.buyCar(TEST_BUYER_ID, TEST_LISTING_ID))
                 .isInstanceOf(ChangeCarOwnerException.class);
+    }
+
+    @Test
+    void createListings_shouldThrowMissedDataException_whenSizeInInputCollectionsNotSame() {
+        List<Long> userIds = List.of(1L, 2L);
+        List<UUID> carIds = List.of(UUID.randomUUID());
+
+        assertThatThrownBy(() -> service.createListings(userIds, carIds))
+                .isInstanceOf(MissedDataException.class);
+
+        verifyNoInteractions(repository);
+    }
+
+    @Test
+    void createListings_shouldSaveAllListings_whenInputDataIsValid() {
+        List<Long> userIds = List.of(1L, 2L);
+        List<UUID> carIds = List.of(UUID.randomUUID(), UUID.randomUUID());
+        List<MarketListing> listings = new ArrayList<>();
+        when(repository.saveAll(anyList())).thenReturn(listings);
+
+        service.createListings(userIds, carIds);
+
+        verify(repository).saveAll(anyList());
     }
 }

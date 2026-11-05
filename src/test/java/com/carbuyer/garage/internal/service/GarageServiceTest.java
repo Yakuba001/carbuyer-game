@@ -12,6 +12,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -29,7 +30,7 @@ public class GarageServiceTest {
     private GarageService garageService;
 
     @Test
-    void getGarageSlotIdWithEmptyStatus_shouldReturnEmptyGarageSlotId_whenExistsByCurrentUserId() {
+    void getGarageSlotIdWithEmptyStatus_shouldReturnEmptyGarageSlotId_whenExistsByCurrentUserIdByUserId() {
         long userId = 1L;
         int slotNumber = 1;
         UUID carId = UUID.randomUUID();
@@ -38,19 +39,19 @@ public class GarageServiceTest {
         when(garageSlotRepository.findFirstByUserIdAndStatus(anyLong(), any(GarageSlotStatus.class)))
                 .thenReturn(Optional.of(exampleSlot));
 
-        Long result = garageService.getGarageSlotIdWithEmptyStatus(userId, status);
+        Long result = garageService.getGarageSlotIdByUserIdAndStatus(userId, status);
 
         assertThat(result).isEqualTo(exampleSlot.getId());
     }
 
     @Test
-    void getGarageSlotIdWithEmptyStatus_shouldThrownNoEmptySlotException_whenSlotDoesNotExist() {
+    void getGarageSlotIdWithEmptyStatus_shouldThrowNoEmptySlotException_whenSlotIdByUserDoesNotExist() {
         long userId = 1L;
         String status = "EMPTY";
         when(garageSlotRepository.findFirstByUserIdAndStatus(anyLong(), any(GarageSlotStatus.class)))
                 .thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> garageService.getGarageSlotIdWithEmptyStatus(userId, status))
+        assertThatThrownBy(() -> garageService.getGarageSlotIdByUserIdAndStatus(userId, status))
                 .isInstanceOf(NoEmptySlotsException.class);
     }
 
@@ -68,7 +69,7 @@ public class GarageServiceTest {
     }
 
     @Test
-    void getSellerGarageSlotId_shouldThrownNotCarOwnerException_whenSellerDontOwnThisCar() {
+    void getSellerGarageSlotId_shouldThrowNotCarOwnerException_whenSellerDontOwnThisCar() {
         long userId = 1L;
         UUID carId = UUID.randomUUID();
         when(garageSlotRepository.findByUserIdAndCarId(userId, carId)).thenReturn(Optional.empty());
@@ -97,7 +98,7 @@ public class GarageServiceTest {
     }
 
     @Test
-    void garageSlotStatusesAndCarIdInItChanger_shouldThrownGarageSlotNotFoundException_whenSlotDoesNotExist() {
+    void garageSlotStatusesAndCarIdInItChanger_shouldThrowGarageSlotNotFoundException_whenSlotDoesNotExist() {
         long userId = 1L;
         UUID carId = UUID.randomUUID();
         when(garageSlotRepository.findById(anyLong())).thenReturn(Optional.empty());
@@ -107,5 +108,55 @@ public class GarageServiceTest {
                 .isInstanceOf(GarageSlotNotFoundException.class);
 
         verify(garageSlotRepository).findById(userId);
+    }
+
+    @Test
+    void changeGarageSlotStatusAndSetCarInItByCarIds_shouldNotThrowException_whenCollectionsSizeTheSame() {
+        List<Long> userIds = List.of(1L, 2L);
+        List<UUID> carIds = List.of(UUID.randomUUID(), UUID.randomUUID());
+        GarageSlot firstSlot = new GarageSlot(userIds.getFirst(), 1, null, GarageSlotStatus.EMPTY);
+        GarageSlot secondSlot = new GarageSlot(userIds.get(1), 1, null, GarageSlotStatus.EMPTY);
+        List<GarageSlot> garageSlots = List.of(firstSlot, secondSlot);
+        when(garageSlotRepository.findEmptySlotsForUpdate(anyList())).thenReturn(garageSlots);
+
+        garageService.changeGarageSlotStatusAndSetCarInItByCarIds(userIds, carIds);
+
+        verify(garageSlotRepository).findEmptySlotsForUpdate(userIds);
+    }
+
+    @Test
+    void changeGarageSlotStatusAndSetCarInItByCarIds_shouldThrowGarageSlotNotFoundException_whenCollectionsSizeNotSame() {
+        List<Long> userIds = List.of(1L, 2L);
+        List<UUID> carIds = List.of(UUID.randomUUID(), UUID.randomUUID());
+        List<GarageSlot> garageSlots = List.of();
+        when(garageSlotRepository.findEmptySlotsForUpdate(userIds)).thenReturn(garageSlots);
+
+        assertThatThrownBy(() -> garageService.changeGarageSlotStatusAndSetCarInItByCarIds(userIds, carIds))
+                .isInstanceOf(GarageSlotNotFoundException.class);
+    }
+
+    @Test
+    void addGarageSlot_shouldAddedGarageSlotAndInvokeRepoSave_whenInputDataIsValid() {
+        long userId = 1L;
+        int slotNumber = 1;
+        GarageSlot firstSlot = new GarageSlot(userId, slotNumber, null, GarageSlotStatus.EMPTY);
+        when(garageSlotRepository.save(any())).thenReturn(firstSlot);
+
+        garageService.addGarageSlot(userId, slotNumber);
+
+        verify(garageSlotRepository).save(any());
+    }
+
+    @Test
+    void addGarageSlots_shouldAddedGarageSlotsAndInvokeRepoSaveAllAndFlush_whenInputDataIsValid() {
+        List<Long> userIds = List.of(1L, 2L);
+        GarageSlot firstSlot = new GarageSlot(userIds.getFirst(), 1, null, GarageSlotStatus.EMPTY);
+        GarageSlot secondSlot = new GarageSlot(userIds.get(1), 1, null, GarageSlotStatus.EMPTY);
+        List<GarageSlot> garageSlots = List.of(firstSlot, secondSlot);
+        when(garageSlotRepository.saveAllAndFlush(anyList())).thenReturn(garageSlots);
+
+        garageService.addGarageSlots(userIds);
+
+        verify(garageSlotRepository).saveAllAndFlush(any());
     }
 }

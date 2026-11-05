@@ -38,7 +38,7 @@ public class CarService {
     }
 
     @Transactional
-    public void addCarsAndSetNewOwners(List<Long> ownerIds) {
+    public List<UUID> addCarsAndSetNewOwners(List<Long> ownerIds) {
         List<Car> cars = ownerIds.stream()
                 .map(ownerId -> new Car(
                         vinGenerator(),
@@ -48,7 +48,10 @@ public class CarService {
                         realPriceGenerator(),
                         ownerId))
                 .toList();
-        carRepository.saveAll(cars);
+        List<Car> savedCars = carRepository.saveAllAndFlush(cars);
+        return savedCars.stream()
+                .map(Car::getId)
+                .toList();
     }
 
     private String vinGenerator() {

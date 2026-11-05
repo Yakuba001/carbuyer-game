@@ -1,15 +1,14 @@
 package com.carbuyer.bot.service;
 
-import com.carbuyer.bot.dto.StartBotRequest;
 import com.carbuyer.bot.entity.BotConfig;
 import com.carbuyer.bot.repository.BotConfigRepository;
 import com.carbuyer.containers.BaseIntegrationTest;
 import com.carbuyer.user.api.UserFacade;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.TestComponent;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -32,12 +31,10 @@ public class BotServiceIT extends BaseIntegrationTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    private static final String TEST_PASSWORD = "12345678";
     private static final long WAITING_TIME = 10;
 
-    private static final int START_AMOUNT = 100;
-    private static final int NEW_LESS_THAN_ACTIVE_AMOUNT = 60;
-    private static final int NEW_MORE_THAN_ACTIVE_AMOUNT = 110;
+    @Value("${app.bot.initial-size:0}")
+    private int START_FIX_BOTS_AMOUNT;
 
     @AfterAll
     void tearDown() {
@@ -45,92 +42,53 @@ public class BotServiceIT extends BaseIntegrationTest {
         jdbcTemplate.execute("TRUNCATE TABLE bot_config CASCADE");
     }
 
-    // TODO: rebuild test with new features from target method
     @Test
-    @Order(1)
-    void startBots_shouldCorrectAddedSwitchOnAndSwitchBotOffs_whenEnvironmentIsConcurrency() {
+    void generalTest() {
         Phaser phaser = new Phaser(threadCount + 1);
-        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
-            logicForFirstScenario_whenBotsNumberAddedToDbAtTheSameTimeByAnyThreads(executor, phaser);
-            logicForSecondScenario_shouldDeactivateBots_whenInReqLessThenCurrActiveBots(executor, phaser);
-            logicForThirdScenario_whenAmountBiggerThanActiveAndBiggerThanActivePlusInActive_shouldAddedInDbDiff(
-                    executor, phaser);
-            logicForFourScenario_theSameLikeThirdScenarioButInActiveAmountBiggerThanInReq_shouldSwitchOnInActive(
-                    executor, phaser);
+        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()){
+            startBots_shouldCorrectAddedBotsInConcurrencyEnv_whenEverybodyTryingUseThisMethod(executor, phaser);
+            startBots_shouldReturnFallBack_whenInDbFieldNumberOfExistingBotsAreNotEqualZero(executor, phaser);
         }
     }
 
-    private void logicForFirstScenario_whenBotsNumberAddedToDbAtTheSameTimeByAnyThreads(ExecutorService executor,
-                                                                                        Phaser phaser) {
-        StartBotRequest startRequest = new StartBotRequest(START_AMOUNT, TEST_PASSWORD);
-        generalLogic(executor, phaser, startRequest);
-
-        BotConfig config = botServiceITComponent.getBotConfig();
-        long activeBots = userFacade.getNumberOfActiveBots();
-
-        assertThat(config).isNotNull();
-        assertThat(config.getTotalBots()).isEqualTo(START_AMOUNT);
-        assertThat(activeBots).isEqualTo(START_AMOUNT);
-    }
-
-    private void logicForSecondScenario_shouldDeactivateBots_whenInReqLessThenCurrActiveBots(ExecutorService executor,
-                                                                                             Phaser phaser) {
-        StartBotRequest startRequest = new StartBotRequest(NEW_LESS_THAN_ACTIVE_AMOUNT, TEST_PASSWORD);
-        generalLogic(executor, phaser, startRequest);
-        int expectedInActiveBotsInDb = START_AMOUNT - NEW_LESS_THAN_ACTIVE_AMOUNT;
-
-        BotConfig config = botServiceITComponent.getBotConfig();
-        long activeBots = userFacade.getNumberOfActiveBots();
-        long inActiveBots = userFacade.getNumberOfInActiveBots();
-
-        assertThat(config).isNotNull();
-        assertThat(config.getTotalBots()).isEqualTo(START_AMOUNT);
-        assertThat(activeBots).isEqualTo(NEW_LESS_THAN_ACTIVE_AMOUNT);
-        assertThat(inActiveBots).isEqualTo(expectedInActiveBotsInDb);
-    }
-
-    private void logicForThirdScenario_whenAmountBiggerThanActiveAndBiggerThanActivePlusInActive_shouldAddedInDbDiff(
+    private void startBots_shouldCorrectAddedBotsInConcurrencyEnv_whenEverybodyTryingUseThisMethod(
             ExecutorService executor,
             Phaser phaser) {
-        StartBotRequest request = new StartBotRequest(NEW_MORE_THAN_ACTIVE_AMOUNT, TEST_PASSWORD);
-        generalLogic(executor, phaser, request);
+        // Speed checker.........................
+        long startTime = System.nanoTime();
+        generalLogic(executor, phaser);
+        long endTime = System.nanoTime();
+        long durationMs = (endTime - startTime) / 1000000;
+        System.out.println("Execution time: " + (durationMs / 1000.0) + " seconds");
 
-        BotConfig config = botServiceITComponent.getBotConfig();
-        long activeBots = userFacade.getNumberOfActiveBots();
-        long inActiveBots = userFacade.getNumberOfInActiveBots();
+        BotConfig resultConfig = botServiceITComponent.getBotConfig();
+        boolean isUserIdExists = userFacade.existsById((long) START_FIX_BOTS_AMOUNT);
+        boolean isInvalidUserIdExists = userFacade.existsById((long) START_FIX_BOTS_AMOUNT + 1);
 
-        assertThat(config).isNotNull();
-        assertThat(config.getTotalBots()).isEqualTo(NEW_MORE_THAN_ACTIVE_AMOUNT);
-        assertThat(activeBots).isEqualTo(NEW_MORE_THAN_ACTIVE_AMOUNT);
-        assertThat(inActiveBots).isEqualTo(0);
+        assertThat(resultConfig).isNotNull();
+        assertThat(resultConfig.getTotalBots()).isEqualTo(START_FIX_BOTS_AMOUNT);
+        assertThat(isUserIdExists).isTrue();
+        assertThat(isInvalidUserIdExists).isFalse();
     }
 
-    private void logicForFourScenario_theSameLikeThirdScenarioButInActiveAmountBiggerThanInReq_shouldSwitchOnInActive(
+    private void startBots_shouldReturnFallBack_whenInDbFieldNumberOfExistingBotsAreNotEqualZero(
             ExecutorService executor,
             Phaser phaser) {
-        StartBotRequest emulateDeactivationReq = new StartBotRequest(NEW_LESS_THAN_ACTIVE_AMOUNT, TEST_PASSWORD);
-        botService.startBots(emulateDeactivationReq);
-        StartBotRequest request = new StartBotRequest(START_AMOUNT, TEST_PASSWORD);
-        generalLogic(executor, phaser, request);
-        int expectedInActiveBotsInDb = NEW_MORE_THAN_ACTIVE_AMOUNT - START_AMOUNT;
+        generalLogic(executor, phaser);
 
-        BotConfig config = botServiceITComponent.getBotConfig();
-        long activeBots = userFacade.getNumberOfActiveBots();
-        long inActiveBots = userFacade.getNumberOfInActiveBots();
+        BotConfig resultConfig = botServiceITComponent.getBotConfig();
 
-        assertThat(config).isNotNull();
-        assertThat(config.getTotalBots()).isEqualTo(NEW_MORE_THAN_ACTIVE_AMOUNT);
-        assertThat(activeBots).isEqualTo(START_AMOUNT);
-        assertThat(inActiveBots).isEqualTo(expectedInActiveBotsInDb);
+        assertThat(resultConfig).isNotNull();
+        assertThat(resultConfig.getTotalBots()).isEqualTo(START_FIX_BOTS_AMOUNT);
     }
 
-    private void generalLogic(ExecutorService executor, Phaser phaser, StartBotRequest request) {
+    private void generalLogic(ExecutorService executor, Phaser phaser) {
         int currentPhase = phaser.getPhase();
         for (int i = 0; i < threadCount; i++) {
             executor.execute(() -> {
                 try {
                     phaser.arriveAndAwaitAdvance();
-                    botService.startBots(request);
+                    botService.startBots();
                 } finally {
                     phaser.arrive();
                 }
