@@ -8,6 +8,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -115,11 +116,23 @@ public class CarServiceTest {
 
     @Test
     void addCarsAndSetNewOwners_shouldSaveAllCarsInDb_whenEverythingWentWrong() {
-        List<Long> exampleIdsList = List.of(1L, 2L);
-        when(carRepository.saveAll(anyList())).thenReturn(anyList());
+        UUID firstCarId = UUID.randomUUID();
+        UUID secondCarId = UUID.randomUUID();
+        List<UUID> exampleIdsList = List.of(firstCarId, secondCarId);
+        List<Long> ids = List.of(1L, 2L);
+        Car firstCar =
+                new Car("227", "Opel", 100, 50, new BigDecimal("200"), ids.getFirst());
+        Car secondCar =
+                new Car("228", "Opel", 100, 50, new BigDecimal("200"), ids.get(1));
+        List<Car> savedCarList = List.of(firstCar, secondCar);
+        ReflectionTestUtils.setField(firstCar, "id", firstCarId);
+        ReflectionTestUtils.setField(secondCar, "id", secondCarId);
+        when(carRepository.saveAllAndFlush(anyList())).thenReturn(savedCarList);
 
-        service.addCarsAndSetNewOwners(exampleIdsList);
+        List<UUID> resultList = service.addCarsAndSetNewOwners(ids);
 
-        verify(carRepository).saveAll(anyList());
+        assertThat(resultList).isEqualTo(exampleIdsList);
+
+        verify(carRepository).saveAllAndFlush(anyCollection());
     }
 }

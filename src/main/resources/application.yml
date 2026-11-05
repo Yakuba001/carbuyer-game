@@ -84,3 +84,6 @@ app:
 
   finance:
     initial-balance: "1000.00"
+
+  bot:
+    initial-size: 1000

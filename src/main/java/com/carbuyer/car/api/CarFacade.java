@@ -7,5 +7,5 @@ public interface CarFacade {
 
     boolean isCarOwner(UUID carId, Long sellerId);
     boolean setNewCarOwner(Long sellerId, Long buyerId, UUID carId);
-    void addCarsByIds(List<Long> ownerIds);
+    List<UUID> addCarsByIds(List<Long> ownerIds);
 }

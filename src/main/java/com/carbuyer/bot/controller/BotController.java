@@ -1,7 +1,6 @@
 package com.carbuyer.bot.controller;
 
 import com.carbuyer.bot.dto.StartBotResponse;
-import com.carbuyer.bot.dto.StartBotRequest;
 import com.carbuyer.bot.service.BotService;
 import com.carbuyer.exception.dto.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -10,13 +9,11 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 @Controller
@@ -29,19 +26,14 @@ public class BotController {
 
     @PostMapping("/on")
     @Operation(
-            summary = "Created bots in the system",
-            description = "Added any users in db with BOT prefix and added garage slot, car and listing"
+            summary = "Enabled bots in system",
+            description = "Enabled existed bots, and start his infinity cycle"
     )
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "Bots successfully created",
+            @ApiResponse(responseCode = "201", description = "Bots successfully enabled",
                     content = @Content(
                             mediaType = "application/json",
                             schema = @Schema(implementation = StartBotResponse.class)
-                    )),
-            @ApiResponse(responseCode = "400", description = "Validation failed",
-                    content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(implementation = ErrorResponse.class)
                     )),
             @ApiResponse(responseCode = "401", description = "Unauthorized",
                     content = @Content(
@@ -54,8 +46,8 @@ public class BotController {
                             schema = @Schema(implementation = ErrorResponse.class)
                     ))
     })
-    public ResponseEntity<StartBotResponse> botsOn(@Valid @RequestBody StartBotRequest request) {
-        StartBotResponse response = botService.startBots(request);
+    public ResponseEntity<StartBotResponse> botsOn() {
+        StartBotResponse response = botService.startBots();
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(response);

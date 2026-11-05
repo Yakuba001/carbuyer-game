@@ -10,7 +10,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.util.AbstractList;
 import java.util.List;
 
 @Service
@@ -72,46 +71,7 @@ public class UserFacadeImpl implements UserFacade {
     }
 
     @Override
-    public void addBots(List<String> names, List<String> emails, List<String> passwords) {
-        int size = names.size();
-        service.createUsers(new AbstractList<>() {
-            @Override
-            public CreateUserCommand get(int index) {
-                if (index < 0 || index >= size) {
-                    throw new IndexOutOfBoundsException();
-                }
-                return new CreateUserCommand(names.get(index), emails.get(index), passwords.get(index));
-            }
-
-            @Override
-            public int size() {
-                return size;
-            }
-        });
-    }
-
-    @Override
-    public int getNumberOfInActiveBots() {
-        return service.getNumberOfInActiveBots();
-    }
-
-    @Override
-    public int getNumberOfActiveBots() {
-        return service.getNumberOfActiveBots();
-    }
-
-    @Override
-    public void activateBots(int amount) {
-        service.botActivator(amount);
-    }
-
-    @Override
-    public void deactivateBots(int amount) {
-        service.botDeactivator(amount);
-    }
-
-    @Override
-    public List<Long> getActiveBotIdsWithLimit(int limit) {
-        return service.getActiveBotIdsWithLimit(limit);
+    public List<Long> addBots(int amount) {
+        return service.createUsers(amount);
     }
 }

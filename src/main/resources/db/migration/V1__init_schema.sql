@@ -6,7 +6,6 @@ CREATE TABLE users
     password_hash   VARCHAR(255) NOT NULL,
     max_slots       INTEGER DEFAULT 1,
     is_bot          BOOLEAN DEFAULT FALSE,
-    is_bot_active   BOOLEAN DEFAULT FALSE,
     version         BIGINT DEFAULT 0 NOT NULL,
     created_at      TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP NOT NULL
 );

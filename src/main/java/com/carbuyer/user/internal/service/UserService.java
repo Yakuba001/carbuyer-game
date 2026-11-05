@@ -1,22 +1,24 @@
 package com.carbuyer.user.internal.service;
 
 import com.carbuyer.exception.exceptions.*;
+import com.carbuyer.garage.api.GarageFacade;
 import com.carbuyer.user.api.dto.CreateUserCommand;
 import com.carbuyer.user.api.dto.UserDto;
-import com.carbuyer.user.api.event.UserCreatedEvent;
 import com.carbuyer.user.internal.entity.User;
 import com.carbuyer.user.internal.entity.UserBalance;
 import com.carbuyer.user.internal.repository.UserBalanceRepository;
 import com.carbuyer.user.internal.repository.UserRepository;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.hibernate.exception.ConstraintViolationException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -28,7 +30,11 @@ public class UserService {
     private final UserBalanceRepository userBalanceRepository;
     @Value("${app.finance.initial-balance:0.00}")
     private BigDecimal initialBalance;
-    private final ApplicationEventPublisher applicationEventPublisher;
+    private final GarageFacade garageFacade;
+    private final PasswordEncoder passwordEncoder;
+
+    private static final String BOTS_DOMAIN = "@carbuyer.com";
+    private static final String BOTS_PREFIX = "CarBuyerBot";
 
     @Transactional
     public UserDto createUser(CreateUserCommand command) {
@@ -36,9 +42,10 @@ public class UserService {
         User newUser = new User(command.name(), command.email(), command.rawPassword());
         UserBalance newBalance = new UserBalance(initialBalance);
         newUser.setBalance(newBalance);
+        int garageDefaultSlotNumber = 1;
         try {
             User savedUser = userRepository.saveAndFlush(newUser);
-            applicationEventPublisher.publishEvent(new UserCreatedEvent(savedUser.getId(), savedUser.getMaxSlots()));
+            garageFacade.addGarageSlot(savedUser.getId(), garageDefaultSlotNumber);
             return new UserDto(
                     savedUser.getId(),
                     savedUser.getName(),
@@ -53,21 +60,23 @@ public class UserService {
     }
 
     @Transactional
-    public void createUsers(List<CreateUserCommand> commands) {
-        List<User> users = commands.stream()
-                .map(cmd -> {
-                    User newUser = new User(cmd.name(), cmd.email(), cmd.rawPassword());
-                    UserBalance newBalance = new UserBalance(initialBalance);
-                    newUser.setBalance(newBalance);
-                    newUser.setBot(true);
-                    newUser.setBotActive(true);
-                    return newUser;
-                })
-                .toList();
+    public List<Long> createUsers(int amount) {
+        String botPassWord = passwordGenerator();
+        List<User> users = new ArrayList<>(amount);
+        for (int i = 0; i < amount; i++) {
+            User newUser = new User(uniqueFieldGenerator("name"), uniqueFieldGenerator("email"), botPassWord);
+            UserBalance newBalance = new UserBalance(initialBalance);
+            newUser.setBalance(newBalance);
+            newUser.setBot(true);
+            users.add(newUser);
+        }
         try {
             List<User> savedUsers = userRepository.saveAllAndFlush(users);
-            savedUsers.forEach(user ->
-                    applicationEventPublisher.publishEvent(new UserCreatedEvent(user.getId(), user.getMaxSlots())));
+            List<Long> savedUserIds = savedUsers.stream().map(User::getId).toList();
+            garageFacade.addGarageSlots(savedUserIds);
+            return savedUsers.stream()
+                    .map(User::getId)
+                    .toList();
         } catch (DataIntegrityViolationException e) {
             dataBaseExceptionResolver(e);
             throw e;
@@ -118,28 +127,6 @@ public class UserService {
         return true;
     }
 
-    public int getNumberOfActiveBots() {
-        return userRepository.countByIsBotTrueAndIsBotActiveTrue();
-    }
-
-    public int getNumberOfInActiveBots() {
-        return userRepository.countByIsBotTrueAndIsBotActiveFalse();
-    }
-
-    public void botActivator(int amount) {
-        int result = userRepository.activateBots(amount);
-        if (result == 0) throw new BotActivateException("Bot activation failed");
-    }
-
-    public void botDeactivator(int amount) {
-        int result = userRepository.deactivateBots(amount);
-        if (result == 0) throw new BotDeactivateException("Bot deactivation failed");
-    }
-
-    public List<Long> getActiveBotIdsWithLimit(int limit) {
-        return userRepository.findActiveBotIdsWithLimit(limit);
-    }
-
     private void dataBaseExceptionResolver(DataIntegrityViolationException ex) {
         if (ex.getCause() instanceof ConstraintViolationException err) {
             String constraintName = err.getConstraintName();
@@ -154,11 +141,31 @@ public class UserService {
     }
 
     private void validateInputData(CreateUserCommand command) {
-        if (command.name() != null && command.name().startsWith("CarBuyerBot")) {
+        if (command.name() != null && command.name().startsWith(BOTS_PREFIX)) {
             throw new InvalidBotDataException("Username cannot start with system bot prefix");
         }
-        if (command.email() != null && command.email().endsWith("@carbuyer.com")) {
+        if (command.email() != null && command.email().endsWith(BOTS_DOMAIN)) {
             throw new InvalidBotDataException("Email domain is reserved for system bots");
         }
+    }
+
+    private String uniqueFieldGenerator(String field) {
+        switch (field) {
+            case "name" -> {
+                return BOTS_PREFIX + saltGenerator();
+            }
+            case "email" -> {
+                return "email" + saltGenerator() + BOTS_DOMAIN;
+            }
+            default -> throw new InvalidBotDataException("Invalid field provided");
+        }
+    }
+
+    private String passwordGenerator() {
+        return passwordEncoder.encode("botPassHardEnough" + saltGenerator());
+    }
+
+    private String saltGenerator() {
+        return RandomStringUtils.randomAlphanumeric(8);
     }
 }
