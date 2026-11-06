@@ -66,8 +66,10 @@ CREATE TABLE market_listings
 CREATE TABLE bot_config
 (
     id              INTEGER PRIMARY KEY DEFAULT 1,
-    total_bots      INTEGER DEFAULT 0 NOT NULL,
-    CONSTRAINT      check_single_row CHECK (id = 1)
+    active_bots     INTEGER DEFAULT 0 NOT NULL,
+    status          VARCHAR(20) NOT NULL DEFAULT 'NOT_ADDED',
+    CONSTRAINT      check_single_row CHECK (id = 1),
+    CONSTRAINT      check_correct_status_type CHECK (status IN ('NOT_ADDED', 'IN_PROGRESS', 'ADDED'))
 );
 
 ALTER SEQUENCE garage_slots_id_seq OWNED BY garage_slots.id;
@@ -78,4 +80,4 @@ CREATE UNIQUE INDEX idx_garage_slots_car_unique ON garage_slots (car_id) WHERE c
 CREATE INDEX idx_market_listings_feed ON market_listings (created_at DESC) WHERE status = 'ACTIVE';
 CREATE UNIQUE INDEX idx_market_listings_one_active_car ON market_listings (car_id) WHERE status = 'ACTIVE';
 
-INSERT INTO bot_config (id, total_bots) VALUES (1, 0);
+INSERT INTO bot_config (id, active_bots) VALUES (1, 0);

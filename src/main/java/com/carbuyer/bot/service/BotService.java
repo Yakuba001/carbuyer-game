@@ -2,6 +2,8 @@ package com.carbuyer.bot.service;
 
 import com.carbuyer.bot.dto.StartBotResponse;
 import com.carbuyer.bot.entity.BotConfig;
+import com.carbuyer.bot.entity.ConfigStatus;
+import com.carbuyer.bot.entity.BotAddedStatus;
 import com.carbuyer.bot.repository.BotConfigRepository;
 import com.carbuyer.car.api.CarFacade;
 import com.carbuyer.exception.exceptions.BotConfigNotFoundException;
@@ -11,6 +13,7 @@ import com.carbuyer.user.api.UserFacade;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
@@ -24,7 +27,6 @@ import java.util.concurrent.TimeUnit;
 @RequiredArgsConstructor
 public class BotService implements AutoCloseable {
 
-    private static final String BOTS_ENABLED = "Bots enabled";
     @Value("${app.bot.initial-size:0}")
     private int START_FIX_BOTS_AMOUNT;
 
@@ -38,16 +40,27 @@ public class BotService implements AutoCloseable {
     private final GarageFacade garageFacade;
     private final MarketFacade marketFacade;
 
-    // TODO: solve transaction starvation problem and try to find better speed realisation
+    // TODO: try to find better speed realisation (curr = ~3.5sec per 1000 bots)
     @Transactional
-    public StartBotResponse startBots() {
-        BotConfig botConfig = botConfigRepository.findAndLock()
-                .orElseThrow(() -> new BotConfigNotFoundException("Bot config not found"));
-        if (botConfig.getTotalBots() == 0) {
-            addBotsCarsAndListingsInSystem();
-            botConfig.setTotalBots(START_FIX_BOTS_AMOUNT);
-        }
-        return new StartBotResponse(BOTS_ENABLED);
+    public StartBotResponse addBots() {
+        addBotsCarsAndListingsInSystem();
+        return new StartBotResponse(BotAddedStatus.BOTS_ADDED.toString());
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public boolean updateStatus(ConfigStatus newStatus, ConfigStatus expectedStatus) {
+        int updatedRows = botConfigRepository.updateStatusIfExpected(newStatus, expectedStatus);
+        return updatedRows > 0;
+    }
+
+    @Transactional(readOnly = true)
+    public String getCurrentStatus() {
+        ConfigStatus status = ConfigStatus.valueOf(botConfigRepository.getConfigStatus());
+        String result;
+        if (status == ConfigStatus.IN_PROGRESS) {
+            result = BotAddedStatus.BOTS_ADDED_IN_PROGRESS.toString();
+        } else result = BotAddedStatus.BOTS_ADDED.toString();
+        return result;
     }
 
     @Override
@@ -63,6 +76,7 @@ public class BotService implements AutoCloseable {
         }
     }
 
+    // TODO: if app restart collections will be empty
     private void addBotsCarsAndListingsInSystem() {
         List<Long> allAddedBotIds = userFacade.addBots(START_FIX_BOTS_AMOUNT);
         List<Long> sellers = new ArrayList<>(allAddedBotIds.subList(0, allAddedBotIds.size() / 2));

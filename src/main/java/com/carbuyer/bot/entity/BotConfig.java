@@ -1,9 +1,6 @@
 package com.carbuyer.bot.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -17,7 +14,11 @@ public class BotConfig {
     @Id
     private Integer id = 1;
 
-    @Column(name = "total_bots", nullable = false)
+    @Column(name = "active_bots", nullable = false)
     @Setter
-    private int totalBots = 0;
+    private int activeBots = 0;
+    @Column(name = "status", nullable = false)
+    @Enumerated(EnumType.STRING)
+    @Setter
+    private ConfigStatus status = ConfigStatus.NOT_ADDED;
 }
