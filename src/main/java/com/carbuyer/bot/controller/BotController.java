@@ -1,7 +1,7 @@
 package com.carbuyer.bot.controller;
 
 import com.carbuyer.bot.dto.StartBotResponse;
-import com.carbuyer.bot.service.BotService;
+import com.carbuyer.bot.service.BotDistributeService;
 import com.carbuyer.exception.dto.ErrorResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -22,9 +22,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @Tag(name = "Bot", description = "Endpoints for bot management")
 public class BotController {
 
-    private final BotService botService;
+    private final BotDistributeService service;
 
-    @PostMapping("/on")
+    @PostMapping("/add")
     @Operation(
             summary = "Enabled bots in system",
             description = "Enabled existed bots, and start his infinity cycle"
@@ -46,8 +46,8 @@ public class BotController {
                             schema = @Schema(implementation = ErrorResponse.class)
                     ))
     })
-    public ResponseEntity<StartBotResponse> botsOn() {
-        StartBotResponse response = botService.startBots();
+    public ResponseEntity<StartBotResponse> addBots() {
+        StartBotResponse response = service.botAdderManager();
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(response);

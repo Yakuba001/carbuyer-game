@@ -26,9 +26,9 @@ public class BotControllerIT extends MockMvcIntegrationTest {
     @Test
     @WithMockUser(value = "bib@g.c", roles = "ADMIN")
     void botsOn_shouldReturn201_whenRequestIsCorrectAndBotsWereCreated() throws Exception {
-        String expectedStatus = "Bots enabled";
+        String expectedStatus = "Bots added";
 
-        MvcResult response = mockMvc.perform(post("/api/v1/bot/on"))
+        MvcResult response = mockMvc.perform(post("/api/v1/bot/add"))
                 .andExpect(status().isCreated())
                 .andReturn();
 
@@ -42,8 +42,8 @@ public class BotControllerIT extends MockMvcIntegrationTest {
 
     @Test
     @WithMockUser(value = "bib@g.c", roles = "USER")
-    void botsOn_shouldReturn403_whenAccessForbidden() throws Exception {
-        mockMvc.perform(post("/api/v1/bot/on"))
+    void addBots_shouldReturn403_whenAccessForbidden() throws Exception {
+        mockMvc.perform(post("/api/v1/bot/add"))
                 .andExpect(status().isForbidden());
     }
 }
