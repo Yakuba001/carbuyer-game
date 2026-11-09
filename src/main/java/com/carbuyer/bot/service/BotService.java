@@ -1,12 +1,10 @@
 package com.carbuyer.bot.service;
 
 import com.carbuyer.bot.dto.StartBotResponse;
-import com.carbuyer.bot.entity.BotConfig;
 import com.carbuyer.bot.entity.ConfigStatus;
 import com.carbuyer.bot.entity.BotAddedStatus;
 import com.carbuyer.bot.repository.BotConfigRepository;
 import com.carbuyer.car.api.CarFacade;
-import com.carbuyer.exception.exceptions.BotConfigNotFoundException;
 import com.carbuyer.garage.api.GarageFacade;
 import com.carbuyer.market.api.MarketFacade;
 import com.carbuyer.user.api.UserFacade;
@@ -40,7 +38,6 @@ public class BotService implements AutoCloseable {
     private final GarageFacade garageFacade;
     private final MarketFacade marketFacade;
 
-    // TODO: try to find better speed realisation (curr = ~3.5sec per 1000 bots)
     @Transactional
     public StartBotResponse addBots() {
         addBotsCarsAndListingsInSystem();

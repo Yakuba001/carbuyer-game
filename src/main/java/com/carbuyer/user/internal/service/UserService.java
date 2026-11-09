@@ -13,6 +13,10 @@ import org.hibernate.exception.ConstraintViolationException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +36,7 @@ public class UserService {
     private BigDecimal initialBalance;
     private final GarageFacade garageFacade;
     private final PasswordEncoder passwordEncoder;
+    private final NamedParameterJdbcTemplate jdbcTemplate;
 
     private static final String BOTS_DOMAIN = "@carbuyer.com";
     private static final String BOTS_PREFIX = "CarBuyerBot";
@@ -71,12 +76,33 @@ public class UserService {
             users.add(newUser);
         }
         try {
-            List<User> savedUsers = userRepository.saveAllAndFlush(users);
-            List<Long> savedUserIds = savedUsers.stream().map(User::getId).toList();
+            MapSqlParameterSource[] userParams = users.stream()
+                    .map(user -> {
+                        MapSqlParameterSource params = new MapSqlParameterSource();
+                        params.addValue("name", user.getName());
+                        params.addValue("email", user.getEmail());
+                        params.addValue("password", user.getPassword());
+                        params.addValue("isBot", user.isBot());
+                        return params;
+                    }).toArray(MapSqlParameterSource[]::new);
+            KeyHolder keyHolder = new GeneratedKeyHolder();
+            String userSql =
+                    "INSERT INTO users (name, email, password_hash, is_bot) VALUES (:name, :email, :password, :isBot)";
+            String balanceSql =
+                    "INSERT INTO user_balances (user_id, balance) VALUES (:userId, :balance)";
+            jdbcTemplate.batchUpdate(userSql, userParams, keyHolder, new String[]{"id"});
+            List<Long> savedUserIds = keyHolder.getKeyList().stream()
+                    .map(map -> ((Number) map.get("id")).longValue()).toList();
+            MapSqlParameterSource[] userBalanceParams = savedUserIds.stream()
+                    .map(userId -> {
+                        MapSqlParameterSource param = new MapSqlParameterSource();
+                        param.addValue("userId", userId);
+                        param.addValue("balance", initialBalance);
+                        return param;
+                    }).toArray(MapSqlParameterSource[]::new);
+            jdbcTemplate.batchUpdate(balanceSql, userBalanceParams);
             garageFacade.addGarageSlots(savedUserIds);
-            return savedUsers.stream()
-                    .map(User::getId)
-                    .toList();
+            return savedUserIds;
         } catch (DataIntegrityViolationException e) {
             dataBaseExceptionResolver(e);
             throw e;

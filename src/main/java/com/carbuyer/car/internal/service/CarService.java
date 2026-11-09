@@ -6,6 +6,10 @@ import com.carbuyer.car.internal.repository.CarRepository;
 import com.carbuyer.exception.exceptions.CarNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.RandomStringUtils;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +24,7 @@ import java.util.concurrent.ThreadLocalRandom;
 public class CarService {
 
     private final CarRepository carRepository;
+    private final NamedParameterJdbcTemplate jdbcTemplate;
 
     public boolean isCarOwner(UUID carId, Long sellerId) {
         Car car = carRepository.findForUpdateById(carId)
@@ -39,19 +44,23 @@ public class CarService {
 
     @Transactional
     public List<UUID> addCarsAndSetNewOwners(List<Long> ownerIds) {
-        List<Car> cars = ownerIds.stream()
-                .map(ownerId -> new Car(
-                        vinGenerator(),
-                        modelGenerator(),
-                        mileageGenerator(),
-                        conditionScoreGenerator(),
-                        realPriceGenerator(),
-                        ownerId))
-                .toList();
-        List<Car> savedCars = carRepository.saveAllAndFlush(cars);
-        return savedCars.stream()
-                .map(Car::getId)
-                .toList();
+        MapSqlParameterSource[] carParams = ownerIds.stream()
+                .map(ownerId -> {
+                    MapSqlParameterSource param = new MapSqlParameterSource();
+                    param.addValue("vin", vinGenerator());
+                    param.addValue("model", modelGenerator());
+                    param.addValue("mileage", mileageGenerator());
+                    param.addValue("condition_score", conditionScoreGenerator());
+                    param.addValue("real_price", realPriceGenerator());
+                    param.addValue("owner_id", ownerId);
+                    return param;
+                }).toArray(MapSqlParameterSource[]::new);
+        KeyHolder keyHolder = new GeneratedKeyHolder();
+        String sql = "INSERT INTO cars (vin, model, mileage, condition_score, real_price, owner_id) " +
+                "VALUES (:vin, :model, :mileage, :condition_score, :real_price, :owner_id)";
+        jdbcTemplate.batchUpdate(sql, carParams, keyHolder, new String[]{"id"});
+        return keyHolder.getKeyList().stream()
+                .map(map -> ((UUID) map.get("id"))).toList();
     }
 
     private String vinGenerator() {

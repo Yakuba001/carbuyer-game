@@ -11,6 +11,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 import java.util.List;
 import java.util.Optional;
@@ -18,6 +20,7 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
@@ -26,6 +29,8 @@ public class GarageServiceTest {
 
     @Mock
     private GarageSlotRepository garageSlotRepository;
+    @Mock
+    private NamedParameterJdbcTemplate jdbcTemplate;
     @InjectMocks
     private GarageService garageService;
 
@@ -112,27 +117,40 @@ public class GarageServiceTest {
 
     @Test
     void changeGarageSlotStatusAndSetCarInItByCarIds_shouldNotThrowException_whenCollectionsSizeTheSame() {
+        int[] expectedCounts = new int[] {1, 1};
         List<Long> userIds = List.of(1L, 2L);
         List<UUID> carIds = List.of(UUID.randomUUID(), UUID.randomUUID());
-        GarageSlot firstSlot = new GarageSlot(userIds.getFirst(), 1, null, GarageSlotStatus.EMPTY);
-        GarageSlot secondSlot = new GarageSlot(userIds.get(1), 1, null, GarageSlotStatus.EMPTY);
-        List<GarageSlot> garageSlots = List.of(firstSlot, secondSlot);
-        when(garageSlotRepository.findEmptySlotsForUpdate(anyList())).thenReturn(garageSlots);
+        when(jdbcTemplate.batchUpdate(any(String.class), any(MapSqlParameterSource[].class)))
+                .thenReturn(expectedCounts);
 
-        garageService.changeGarageSlotStatusAndSetCarInItByCarIds(userIds, carIds);
+        assertDoesNotThrow(() -> garageService.changeGarageSlotStatusAndSetCarInItByCarIds(userIds, carIds));
 
-        verify(garageSlotRepository).findEmptySlotsForUpdate(userIds);
+        verify(jdbcTemplate).batchUpdate(any(String.class), any(MapSqlParameterSource[].class));
     }
 
     @Test
-    void changeGarageSlotStatusAndSetCarInItByCarIds_shouldThrowGarageSlotNotFoundException_whenCollectionsSizeNotSame() {
-        List<Long> userIds = List.of(1L, 2L);
+    void changeGarageSlotStatusAndSetCarInItByCarIds_shouldThrowGarageSlotNotFoundException_whenArgSizesNotSame() {
+        List<Long> userIds = List.of(1L, 2L, 3L);
         List<UUID> carIds = List.of(UUID.randomUUID(), UUID.randomUUID());
-        List<GarageSlot> garageSlots = List.of();
-        when(garageSlotRepository.findEmptySlotsForUpdate(userIds)).thenReturn(garageSlots);
 
         assertThatThrownBy(() -> garageService.changeGarageSlotStatusAndSetCarInItByCarIds(userIds, carIds))
                 .isInstanceOf(GarageSlotNotFoundException.class);
+
+        verifyNoInteractions(jdbcTemplate);
+    }
+
+    @Test
+    void changeGarageSlotStatusAndSetCarInItByCarIds_shouldThrowGarageSlotNotFoundException_whenWereUpdatedNotSameAmt() {
+        int[] expectedCounts = new int[] {1, 2};
+        List<Long> userIds = List.of(1L, 2L);
+        List<UUID> carIds = List.of(UUID.randomUUID(), UUID.randomUUID());
+        when(jdbcTemplate.batchUpdate(any(String.class), any(MapSqlParameterSource[].class)))
+                .thenReturn(expectedCounts);
+
+        assertThatThrownBy(() -> garageService.changeGarageSlotStatusAndSetCarInItByCarIds(userIds, carIds))
+                .isInstanceOf(GarageSlotNotFoundException.class);
+
+        verify(jdbcTemplate).batchUpdate(any(String.class), any(MapSqlParameterSource[].class));
     }
 
     @Test
@@ -149,14 +167,12 @@ public class GarageServiceTest {
 
     @Test
     void addGarageSlots_shouldAddedGarageSlotsAndInvokeRepoSaveAllAndFlush_whenInputDataIsValid() {
+        int[] expectedCounts = new int[] {1, 1};
         List<Long> userIds = List.of(1L, 2L);
-        GarageSlot firstSlot = new GarageSlot(userIds.getFirst(), 1, null, GarageSlotStatus.EMPTY);
-        GarageSlot secondSlot = new GarageSlot(userIds.get(1), 1, null, GarageSlotStatus.EMPTY);
-        List<GarageSlot> garageSlots = List.of(firstSlot, secondSlot);
-        when(garageSlotRepository.saveAllAndFlush(anyList())).thenReturn(garageSlots);
+        when(jdbcTemplate.batchUpdate(any(String.class), any(MapSqlParameterSource[].class))).thenReturn(expectedCounts);
 
         garageService.addGarageSlots(userIds);
 
-        verify(garageSlotRepository).saveAllAndFlush(any());
+        verify(jdbcTemplate).batchUpdate(any(String.class), any(MapSqlParameterSource[].class));
     }
 }

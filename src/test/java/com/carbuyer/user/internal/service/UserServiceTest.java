@@ -13,12 +13,14 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -37,6 +39,8 @@ public class UserServiceTest {
     private GarageFacade garageFacade;
     @Mock
     private PasswordEncoder passwordEncoder;
+    @Mock
+    private NamedParameterJdbcTemplate jdbcTemplate;
     @InjectMocks
     private UserService userService;
 
@@ -194,25 +198,42 @@ public class UserServiceTest {
     @Test
     void createUsers_shouldReturnCorrectIdsList_whenUsersAreCreated() {
         int amount = 2;
-        List<User> savedUsers = new ArrayList<>(amount);
-        for (int i = 0; i < amount; i++) {
-            User currUser = new User("name" + i, "email" + i, "password");
-            ReflectionTestUtils.setField(currUser, "id", (long) i);
-            savedUsers.add(currUser);
-        }
-        when(passwordEncoder.encode(anyString())).thenReturn("password");
-        when(userRepository.saveAllAndFlush(anyList())).thenReturn(savedUsers);
+        long id1 = 10L;
+        long id2 = 20L;
+        doAnswer(invocation -> {
+            KeyHolder keyHolder = invocation.getArgument(2);
+            keyHolder.getKeyList().add(Map.of("id", id1));
+            keyHolder.getKeyList().add(Map.of("id", id2));
+            return new int[]{1, 1};
+        }).when(jdbcTemplate).batchUpdate(
+                any(String.class),
+                any(MapSqlParameterSource[].class),
+                any(KeyHolder.class),
+                eq(new String[]{"id"})
+        );
+        doAnswer(invocation -> new int[]{1, 1})
+                .when(jdbcTemplate).batchUpdate(
+                        any(String.class),
+                        any(MapSqlParameterSource[].class));
         doNothing().when(garageFacade).addGarageSlots(anyList());
 
         List<Long> resultList = userService.createUsers(amount);
 
-        assertThat(resultList.size()).isEqualTo(amount);
+        assertThat(resultList).hasSize(amount);
+        assertThat(resultList.get(0)).isEqualTo(id1);
+        assertThat(resultList.get(1)).isEqualTo(id2);
     }
 
     @Test
     void createUsers_shouldThrowException_whenEmailOrNameIsTaken() {
-        when(userRepository.saveAllAndFlush(anyList())).thenThrow(new DataIntegrityViolationException(""));
+        doThrow(new DataIntegrityViolationException("Duplicate key"))
+                .when(jdbcTemplate).batchUpdate(
+                        any(String.class),
+                        any(MapSqlParameterSource[].class),
+                        any(KeyHolder.class),
+                        any(String[].class));
 
-        assertThatThrownBy(() -> userService.createUsers(1)).isInstanceOf(UserAlreadyExistsException.class);
+        assertThatThrownBy(() -> userService.createUsers(1))
+                .isInstanceOf(UserAlreadyExistsException.class);
     }
 }
