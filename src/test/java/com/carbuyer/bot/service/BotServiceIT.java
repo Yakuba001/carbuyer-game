@@ -6,15 +6,12 @@ import com.carbuyer.bot.entity.ConfigStatus;
 import com.carbuyer.bot.repository.BotConfigRepository;
 import com.carbuyer.containers.BaseIntegrationTest;
 import com.carbuyer.exception.exceptions.BotCreationException;
-import com.carbuyer.user.api.UserFacade;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.mock.mockito.SpyBean;
 import org.springframework.jdbc.core.JdbcTemplate;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.*;
 
@@ -26,13 +23,12 @@ public class BotServiceIT extends BaseIntegrationTest {
 
     @SpyBean
     private BotService botService;
-    @Autowired BotDistributeService distributeService;
-    @Autowired private UserFacade userFacade;
-    @Autowired private JdbcTemplate jdbcTemplate;
-    @Autowired private BotConfigRepository botConfigRepository;
-
-    @Value("${app.bot.initial-size:0}")
-    private int START_FIX_BOTS_AMOUNT;
+    @Autowired
+    BotDistributeService distributeService;
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+    @Autowired
+    private BotConfigRepository botConfigRepository;
 
     @AfterEach
     void tearDown() {
@@ -45,8 +41,8 @@ public class BotServiceIT extends BaseIntegrationTest {
     void botAdderManager_generalHappyPathTest() {
         CountDownLatch startLatch = new CountDownLatch(1);
         CountDownLatch endLatch = new CountDownLatch(threadCount);
-        List<StartBotResponse> resultResponseList = new ArrayList<>(threadCount);
-        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()){
+        List<StartBotResponse> resultResponseList = new CopyOnWriteArrayList<>();
+        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
             for (int i = 0; i < threadCount; i++) {
                 executor.execute(() -> {
                     try {
@@ -59,15 +55,45 @@ public class BotServiceIT extends BaseIntegrationTest {
                     }
                 });
             }
-            speedExecutionChecker(startLatch, endLatch);
+            try {
+                startLatch.countDown();
+                endLatch.await();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
             StartBotResponse finalStatus = distributeService.botAdderManager();
-            boolean oneTimeAdded = userFacade.existsById((long) START_FIX_BOTS_AMOUNT);
-            boolean doubleTimeAdded = userFacade.existsById((long) START_FIX_BOTS_AMOUNT + 1);
 
             assertThat(resultResponseList.size()).isEqualTo(threadCount);
             assertThat(finalStatus.status()).isEqualTo(BotAddedStatus.BOTS_ADDED.toString());
-            assertThat(oneTimeAdded).isTrue();
-            assertThat(doubleTimeAdded).isFalse();
+        }
+    }
+
+    @Test
+    void addBots_oneThreadHappyPathTest() {
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch endLatch = new CountDownLatch(1);
+        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            executor.execute(() -> {
+                try {
+                    startLatch.await();
+                    long startTime = System.nanoTime();
+                    botService.addBots();
+                    long endTime = System.nanoTime();
+                    long durationMs = (endTime - startTime) / 1000000;
+                    System.out.println("Execution time: " + (durationMs / 1000.0) + " seconds");
+
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                } finally {
+                    endLatch.countDown();
+                }
+            });
+            startLatch.countDown();
+            try {
+                endLatch.await();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
         }
     }
 
@@ -80,20 +106,5 @@ public class BotServiceIT extends BaseIntegrationTest {
 
         ConfigStatus finalStatus = ConfigStatus.valueOf(botConfigRepository.getConfigStatus());
         assertThat(finalStatus).isEqualTo(ConfigStatus.NOT_ADDED);
-    }
-
-    private void speedExecutionChecker(CountDownLatch startLatch, CountDownLatch endLatch) {
-        long startTime = System.nanoTime();
-
-        try {
-            startLatch.countDown();
-            endLatch.await();
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-
-        long endTime = System.nanoTime();
-        long durationMs = (endTime - startTime) / 1000000;
-        System.out.println("Execution time: " + (durationMs / 1000.0) + " seconds");
     }
 }

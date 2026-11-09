@@ -8,16 +8,18 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.support.KeyHolder;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -25,6 +27,8 @@ public class CarServiceTest {
 
     @Mock
     private CarRepository carRepository;
+    @Mock
+    private NamedParameterJdbcTemplate jdbcTemplate;
     @InjectMocks
     private CarService service;
 
@@ -115,24 +119,25 @@ public class CarServiceTest {
     }
 
     @Test
-    void addCarsAndSetNewOwners_shouldSaveAllCarsInDb_whenEverythingWentWrong() {
-        UUID firstCarId = UUID.randomUUID();
-        UUID secondCarId = UUID.randomUUID();
-        List<UUID> exampleIdsList = List.of(firstCarId, secondCarId);
-        List<Long> ids = List.of(1L, 2L);
-        Car firstCar =
-                new Car("227", "Opel", 100, 50, new BigDecimal("200"), ids.getFirst());
-        Car secondCar =
-                new Car("228", "Opel", 100, 50, new BigDecimal("200"), ids.get(1));
-        List<Car> savedCarList = List.of(firstCar, secondCar);
-        ReflectionTestUtils.setField(firstCar, "id", firstCarId);
-        ReflectionTestUtils.setField(secondCar, "id", secondCarId);
-        when(carRepository.saveAllAndFlush(anyList())).thenReturn(savedCarList);
+    void addCarsAndSetNewOwners_shouldSaveAllCarsInDb() {
+        List<Long> ownerIds = List.of(1L, 2L);
+        UUID uuid1 = UUID.randomUUID();
+        UUID uuid2 = UUID.randomUUID();
+        doAnswer(i -> {
+            KeyHolder keyHolder = i.getArgument(2);
+            keyHolder.getKeyList().add(Map.of("id", uuid1));
+            keyHolder.getKeyList().add(Map.of("id", uuid2));
+            return new int[]{1, 1};
+        }).when(jdbcTemplate).batchUpdate(
+                any(String.class),
+                any(MapSqlParameterSource[].class),
+                any(KeyHolder.class),
+                eq(new String[]{"id"}));
 
-        List<UUID> resultList = service.addCarsAndSetNewOwners(ids);
+        List<UUID> result = service.addCarsAndSetNewOwners(ownerIds);
 
-        assertThat(resultList).isEqualTo(exampleIdsList);
-
-        verify(carRepository).saveAllAndFlush(anyCollection());
+        assertThat(result.size()).isEqualTo(ownerIds.size());
+        assertThat(result.getFirst()).isEqualTo(uuid1);
+        assertThat(result.getLast()).isEqualTo(uuid2);
     }
 }
