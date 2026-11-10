@@ -20,4 +20,6 @@ public interface UserFacade {
                         BigDecimal sellerBalance,
                         BigDecimal amount);
     List<Long> addBots(int amount);
+    List<Long> getAllBuyerBotIds();
+    List<Long> getAllSellerBotIds();
 }

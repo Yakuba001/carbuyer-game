@@ -236,4 +236,24 @@ public class UserServiceTest {
         assertThatThrownBy(() -> userService.createUsers(1))
                 .isInstanceOf(UserAlreadyExistsException.class);
     }
+
+    @Test
+    void getAllBuyerBotIds_shouldReturnCorrectBuyerIdsList() {
+        List<Long> expectedList = List.of(1L, 2L, 3L);
+        when(userRepository.findBuyerBotIds()).thenReturn(expectedList);
+
+        List<Long> resultList = userService.getAllBuyerBotIds();
+
+        assertThat(resultList.size()).isEqualTo(expectedList.size());
+    }
+
+    @Test
+    void getAllSellerBotIds_shouldReturnCorrectSellerIdsList() {
+        List<Long> expectedList = List.of(1L, 2L, 3L);
+        when(userRepository.findActiveSellerBotIds()).thenReturn(expectedList);
+
+        List<Long> resultList = userService.getAllSellerBotIds();
+
+        assertThat(resultList.size()).isEqualTo(expectedList.size());
+    }
 }

@@ -153,6 +153,14 @@ public class UserService {
         return true;
     }
 
+    public List<Long> getAllBuyerBotIds() {
+        return userRepository.findBuyerBotIds();
+    }
+
+    public List<Long> getAllSellerBotIds() {
+        return userRepository.findActiveSellerBotIds();
+    }
+
     private void dataBaseExceptionResolver(DataIntegrityViolationException ex) {
         if (ex.getCause() instanceof ConstraintViolationException err) {
             String constraintName = err.getConstraintName();

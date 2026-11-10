@@ -3,6 +3,7 @@ package com.carbuyer.bot.service;
 import com.carbuyer.bot.dto.StartBotResponse;
 import com.carbuyer.bot.entity.ConfigStatus;
 import com.carbuyer.exception.exceptions.BotCreationException;
+import com.carbuyer.user.api.UserFacade;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -19,6 +20,8 @@ public class BotDistributeServiceTest {
 
     @Mock
     private BotService botService;
+    @Mock
+    private UserFacade userFacade;
     @InjectMocks
     private BotDistributeService distributeService;
 
@@ -64,4 +67,6 @@ public class BotDistributeServiceTest {
         verify(botService, times(2)).updateStatus(any(), any());
         verify(botService, never()).getCurrentStatus();
     }
+
+    // TODO: cover business-logic for startBots method with all edge-cases..................................
 }

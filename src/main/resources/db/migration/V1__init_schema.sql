@@ -81,3 +81,7 @@ CREATE INDEX idx_market_listings_feed ON market_listings (created_at DESC) WHERE
 CREATE UNIQUE INDEX idx_market_listings_one_active_car ON market_listings (car_id) WHERE status = 'ACTIVE';
 
 INSERT INTO bot_config (id, active_bots) VALUES (1, 0);
+
+CREATE INDEX idx_market_listings_seller_active ON market_listings (seller_id) WHERE status = 'ACTIVE';
+
+CREATE INDEX idx_users_bots ON users(id) WHERE is_bot = TRUE;

@@ -74,4 +74,14 @@ public class UserFacadeImpl implements UserFacade {
     public List<Long> addBots(int amount) {
         return service.createUsers(amount);
     }
+
+    @Override
+    public List<Long> getAllBuyerBotIds() {
+        return service.getAllBuyerBotIds();
+    }
+
+    @Override
+    public List<Long> getAllSellerBotIds() {
+        return service.getAllSellerBotIds();
+    }
 }

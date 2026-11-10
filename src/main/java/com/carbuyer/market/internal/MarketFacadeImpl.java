@@ -18,4 +18,19 @@ class MarketFacadeImpl implements MarketFacade {
     public void createListings(List<Long> sellerIds, List<UUID> carIds) {
         marketService.createListings(sellerIds, carIds);
     }
+
+    @Override
+    public UUID getRandomListingId() {
+        return marketService.getRandomActiveListingId();
+    }
+
+    @Override
+    public void buyCar(Long buyerId, UUID listingId) {
+        marketService.buyCar(buyerId, listingId);
+    }
+
+    @Override
+    public Long getBotSellerId(UUID listingId) {
+        return marketService.getBotSellerId(listingId);
+    }
 }
