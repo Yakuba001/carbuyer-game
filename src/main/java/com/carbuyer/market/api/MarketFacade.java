@@ -6,4 +6,7 @@ import java.util.UUID;
 public interface MarketFacade {
 
     void createListings(List<Long> sellerIds, List<UUID> carIds);
+    UUID getRandomListingId();
+    void buyCar(Long buyerId, UUID listingId);
+    Long getBotSellerId(UUID listingId);
 }

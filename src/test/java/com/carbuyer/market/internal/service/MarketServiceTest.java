@@ -303,4 +303,43 @@ public class MarketServiceTest {
 
         verify(repository).saveAll(anyList());
     }
+
+    @Test
+    void getRandomActiveListingId_shouldReturnUUID_whenListingExists() {
+        UUID expectedId = UUID.randomUUID();
+        when(repository.findRandomActiveListingId()).thenReturn(Optional.of(expectedId));
+
+        UUID resultId = service.getRandomActiveListingId();
+
+        assertThat(resultId).isEqualTo(expectedId);
+    }
+
+    @Test
+    void getRandomActiveListingId_shouldReturnNull_whenListingUnExists() {
+        when(repository.findRandomActiveListingId()).thenReturn(Optional.empty());
+
+        UUID resultId = service.getRandomActiveListingId();
+
+        assertThat(resultId).isNull();
+    }
+
+    @Test
+    void getBotSellerId_shouldReturnLong_whenSellerExists() {
+        UUID listingId = UUID.randomUUID();
+        Long expectedId = 1L;
+        when(repository.findBotSellerId(any(UUID.class))).thenReturn(Optional.of(expectedId));
+
+        Long resultId = service.getBotSellerId(listingId);
+
+        assertThat(resultId).isEqualTo(expectedId);
+    }
+
+    @Test
+    void getBotSellerId_shouldReturnNull_whenSellerUnExists() {
+        when(repository.findBotSellerId(any(UUID.class))).thenReturn(Optional.empty());
+
+        Long resultId = service.getBotSellerId(UUID.randomUUID());
+
+        assertThat(resultId).isNull();
+    }
 }

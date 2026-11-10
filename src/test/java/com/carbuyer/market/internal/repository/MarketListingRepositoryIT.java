@@ -173,6 +173,43 @@ public class MarketListingRepositoryIT extends DataJpaIntegrationTest {
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 
+    @Test
+    void findRandomActiveListingId_shouldReturnRandomActiveListing_whenActiveListingExistsInDb() {
+        MarketListing expectedListing = addToDbAndGetTestMarketListing(null);
+        marketListingRepository.saveAndFlush(expectedListing);
+
+        UUID listingId = marketListingRepository.findRandomActiveListingId().orElse(null);
+
+        assertThat(listingId).isEqualTo(expectedListing.getId());
+    }
+
+    @Test
+    void findBotSellerId_shouldReturnBotSellerId_whenListingSellerIsBot() {
+        jdbcTemplate.update("INSERT INTO users (id, name, email, password_hash, is_bot) OVERRIDING SYSTEM VALUE " +
+                        "VALUES (?, ?, ?, ?, ?)",
+                TEST_USER_ID, "Bot", "bot@g.c", "12345678", true);
+        UUID randomCarId = UUID.randomUUID();
+        addTestCorrectCarToDb(randomCarId);
+        MarketListing testListing = new MarketListing(randomCarId, TEST_USER_ID, null, testPrice);
+        marketListingRepository.saveAndFlush(testListing);
+        UUID listingId = testListing.getId();
+
+        Long resultId = marketListingRepository.findBotSellerId(listingId).orElse(null);
+
+        assertThat(resultId).isEqualTo(TEST_USER_ID);
+    }
+
+    @Test
+    void findBotSellerId_shouldReturnNull_whenListingSellerIsUser() {
+        MarketListing expectedListing = addToDbAndGetTestMarketListing(null);
+        marketListingRepository.saveAndFlush(expectedListing);
+        UUID expectedListingId = expectedListing.getId();
+
+        Long resultId = marketListingRepository.findBotSellerId(expectedListingId).orElse(null);
+
+        assertThat(resultId).isNull();
+    }
+
     private static Stream<MarketListing> nullFieldsInListingObjs() {
         MarketListing nullStatus = new MarketListing(TEST_CAR_ID, TEST_USER_ID, null, testPrice);
         nullStatus.setStatus(null);
