@@ -7,8 +7,10 @@ import com.carbuyer.market.api.MarketFacade;
 import com.carbuyer.user.api.UserFacade;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.util.Deque;
 import java.util.List;
 import java.util.UUID;
@@ -28,6 +30,11 @@ public class BotDistributeService implements AutoCloseable {
     private final Deque<Long> buyerIds = new ConcurrentLinkedDeque<>();
     private final Deque<Long> sellerIds = new ConcurrentLinkedDeque<>();
 
+    @Value("${app.bot.think-time.min:1000}")
+    private Duration minThinkTime;
+    @Value("${app.bot.think-time.max:5000}")
+    private Duration maxThinkTime;
+
     public StartBotResponse botAdderManager() {
         boolean success = botService.updateStatus(ConfigStatus.IN_PROGRESS, ConfigStatus.NOT_ADDED);
         if (!success) {
@@ -45,40 +52,41 @@ public class BotDistributeService implements AutoCloseable {
             throw new BotCreationException("Bot creation failed: " + e.getMessage());
         }
     }
+
     // TODO: will add endpoints in controller
-    public synchronized void startBots() {
+    public synchronized void startBots(int numberOfWorkerThreads) {
         if (isBotsRunning) return;
         botAdderManager();
         isBotsRunning = true;
         threadPool = Executors.newVirtualThreadPerTaskExecutor();
-
-        // TODO: just stubbing
-        int parallelWorkers = 10;
-
-        for (int i = 0; i < parallelWorkers; i++) {
+        for (int i = 0; i < numberOfWorkerThreads; i++) {
             threadPool.execute(this::runSimulationLoop);
         }
     }
+
     // TODO: create endpoints too
     public synchronized void stopBots() {
         isBotsRunning = false;
         close();
     }
+
     // TODO: check how its working in concurrency environment and all in all work or not................
     private void runSimulationLoop() {
         while (isBotsRunning && !Thread.currentThread().isInterrupted()) {
             try {
-                int thinkTime = ThreadLocalRandom.current().nextInt(1, 5);
-                TimeUnit.SECONDS.sleep(thinkTime);
+                long minMs = minThinkTime.toMillis();
+                long maxMs = maxThinkTime.toMillis();
+                long thinkTimeMs = (minMs >= maxMs) ? minMs : ThreadLocalRandom.current().nextLong(minMs, maxMs);
+                TimeUnit.MILLISECONDS.sleep(thinkTimeMs);
                 Long buyerId = this.buyerIds.pollFirst();
                 if (buyerId == null) {
-                    TimeUnit.SECONDS.sleep(1);
+                    TimeUnit.MILLISECONDS.sleep(thinkTimeMs);
                     continue;
                 }
                 UUID listingId = marketFacade.getRandomListingId();
                 if (listingId == null) {
                     this.buyerIds.addLast(buyerId);
-                    TimeUnit.SECONDS.sleep(1);
+                    TimeUnit.MILLISECONDS.sleep(thinkTimeMs);
                     continue;
                 }
                 try {
