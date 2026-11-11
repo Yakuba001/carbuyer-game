@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.Deque;
 import java.util.List;
@@ -55,7 +56,7 @@ public class BotDistributeService implements AutoCloseable {
 
     // TODO: will add endpoints in controller
     public synchronized void startBots(int numberOfWorkerThreads) {
-        if (isBotsRunning) return;
+        if (isBotsRunning || numberOfWorkerThreads <= 0) return;
         botAdderManager();
         isBotsRunning = true;
         threadPool = Executors.newVirtualThreadPerTaskExecutor();
@@ -70,7 +71,6 @@ public class BotDistributeService implements AutoCloseable {
         close();
     }
 
-    // TODO: check how its working in concurrency environment and all in all work or not................
     private void runSimulationLoop() {
         while (isBotsRunning && !Thread.currentThread().isInterrupted()) {
             try {
@@ -81,25 +81,37 @@ public class BotDistributeService implements AutoCloseable {
                 Long buyerId = this.buyerIds.pollFirst();
                 if (buyerId == null) {
                     TimeUnit.MILLISECONDS.sleep(thinkTimeMs);
+                    log.info("BuyerId is empty");
                     continue;
                 }
                 UUID listingId = marketFacade.getRandomListingId();
                 if (listingId == null) {
                     this.buyerIds.addLast(buyerId);
                     TimeUnit.MILLISECONDS.sleep(thinkTimeMs);
+                    log.info("ListingId is empty");
+                    continue;
+                }
+                UUID listingCarId = marketFacade.getListingCarId(listingId);
+                if (listingCarId == null) {
+                    this.buyerIds.addLast(buyerId);
+                    TimeUnit.MILLISECONDS.sleep(thinkTimeMs);
+                    log.info("ListingCarId is empty");
                     continue;
                 }
                 try {
                     Long sellerId = marketFacade.getBotSellerId(listingId);
                     marketFacade.buyCar(buyerId, listingId);
+                    marketFacade.createBotListing(buyerId, listingCarId, priceGenerator());
                     this.sellerIds.addLast(buyerId);
                     if (sellerId != null) {
                         this.sellerIds.remove(sellerId);
                         this.buyerIds.addLast(sellerId);
-                        log.info("Bot {} bought a car from {} (Listing: {})", buyerId, sellerId, listingId);
+                        log.info("Bot {} bought a car from Bot {} (Listing: {})", buyerId, sellerId, listingId);
                     }
+                    log.info("New listing is created");
                 } catch (Exception e) {
                     this.buyerIds.addLast(buyerId);
+                    log.info(e.getMessage());
                 }
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
@@ -127,5 +139,11 @@ public class BotDistributeService implements AutoCloseable {
         List<Long> sellerIds = userFacade.getAllSellerBotIds();
         this.buyerIds.addAll(buyerIds);
         this.sellerIds.addAll(sellerIds);
+    }
+    // TODO: thinking about economic...
+    private BigDecimal priceGenerator() {
+        double lowerBound = 10.00;
+        double upperBound = 100.00;
+        return new BigDecimal(ThreadLocalRandom.current().nextDouble(lowerBound, upperBound));
     }
 }

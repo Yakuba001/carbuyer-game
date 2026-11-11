@@ -1,10 +1,12 @@
 package com.carbuyer.market.internal;
 
 import com.carbuyer.market.api.MarketFacade;
+import com.carbuyer.market.api.dto.CreateListingRequestDto;
 import com.carbuyer.market.internal.service.MarketService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
@@ -32,5 +34,16 @@ class MarketFacadeImpl implements MarketFacade {
     @Override
     public Long getBotSellerId(UUID listingId) {
         return marketService.getBotSellerId(listingId);
+    }
+
+    @Override
+    public void createBotListing(Long sellerId, UUID carId, BigDecimal price) {
+        CreateListingRequestDto requestDto = new CreateListingRequestDto(carId, price);
+        marketService.createListing(sellerId, requestDto);
+    }
+
+    @Override
+    public UUID getListingCarId(UUID listingId) {
+        return marketService.getListingCarId(listingId);
     }
 }

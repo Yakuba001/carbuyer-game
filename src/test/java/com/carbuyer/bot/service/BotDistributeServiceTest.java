@@ -12,6 +12,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.math.BigDecimal;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
@@ -83,6 +84,7 @@ public class BotDistributeServiceTest {
         List<Long> sellerIds = List.of(4L, 5L);
         Long sellerId = sellerIds.getFirst();
         UUID listingId = UUID.randomUUID();
+        UUID listingCarId = UUID.randomUUID();
         int numberOfWorkerThreads = 2;
         when(botService.updateStatus(any(), any())).thenReturn(true);
         when(botService.addBots()).thenReturn(null);
@@ -90,8 +92,10 @@ public class BotDistributeServiceTest {
         when(userFacade.getAllSellerBotIds()).thenReturn(sellerIds);
 
         when(marketFacade.getRandomListingId()).thenReturn(listingId);
+        when(marketFacade.getListingCarId(any(UUID.class))).thenReturn(listingCarId);
         when(marketFacade.getBotSellerId(any(UUID.class))).thenReturn(sellerId);
         doNothing().when(marketFacade).buyCar(anyLong(), any(UUID.class));
+        doNothing().when(marketFacade).createBotListing(anyLong(), any(UUID.class), any(BigDecimal.class));
         sleepThreadDurationSetter();
 
         distributeService.startBots(numberOfWorkerThreads);
