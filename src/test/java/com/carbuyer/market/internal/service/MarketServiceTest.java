@@ -342,4 +342,24 @@ public class MarketServiceTest {
 
         assertThat(resultId).isNull();
     }
+
+    @Test
+    void getListingCarId_shouldReturnCarUUID_whenListingExists() {
+        UUID expectedCarId = UUID.randomUUID();
+        MarketListing listing = new MarketListing(expectedCarId, 1L, null, TEST_PRICE);
+        when(repository.findById(any(UUID.class))).thenReturn(Optional.of(listing));
+
+        UUID resultCarId = service.getListingCarId(expectedCarId);
+
+        assertThat(resultCarId).isEqualTo(expectedCarId);
+    }
+
+    @Test
+    void getListingCarId_shouldReturnNull_whenListingUnExists() {
+        when(repository.findById(any(UUID.class))).thenReturn(Optional.empty());
+
+        UUID resultCarId = service.getListingCarId(UUID.randomUUID());
+
+        assertThat(resultCarId).isNull();
+    }
 }

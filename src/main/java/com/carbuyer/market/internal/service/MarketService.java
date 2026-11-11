@@ -150,6 +150,13 @@ public class MarketService {
         return repository.findBotSellerId(listingId).orElse(null);
     }
 
+    @Transactional(readOnly = true)
+    public UUID getListingCarId(UUID listingId) {
+        MarketListing listing = repository.findById(listingId).orElse(null);
+        if (listing == null) return null;
+        return listing.getCarId();
+    }
+
     private List<BigDecimal> priceGenerator(int size) {
         double lowerBound = 100.00;
         double upperBound = 1000.00;

@@ -46,10 +46,11 @@ public class GarageService {
         GarageSlot sellerGarageSlot = repository.findById(sellerGarageSlotId)
                 .orElseThrow(() ->
                         new GarageSlotNotFoundException("Garage slot with id " + sellerGarageSlotId + " not found"));
-        buyerGarageSlot.setCarId(carId);
-        buyerGarageSlot.setStatus(GarageSlotStatus.OCCUPIED);
         sellerGarageSlot.setCarId(null);
         sellerGarageSlot.setStatus(GarageSlotStatus.EMPTY);
+        repository.saveAndFlush(sellerGarageSlot);
+        buyerGarageSlot.setCarId(carId);
+        buyerGarageSlot.setStatus(GarageSlotStatus.OCCUPIED);
     }
 
     @Transactional
