@@ -7,6 +7,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -42,5 +44,37 @@ public class BotDistributeServiceIT extends BaseIntegrationTest {
         assertThat(resultSellerList.size() + resultBuyerList.size()).isEqualTo(startBotAmount);
         assertThat(resultSellerList.size()).isCloseTo(expectedHalf, within(1));
         assertThat(resultBuyerList.size()).isCloseTo(expectedHalf, within(1));
+    }
+
+    @Test
+    void startBots_shouldWorkCorrectly_whenExecutedConcurrently() {
+        int startBotAmount = 11;
+        int expectedHalf = startBotAmount / 2;
+        ReflectionTestUtils.setField(botService, "START_FIX_BOTS_AMOUNT", startBotAmount);
+
+        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()){
+            for (int i = 0; i < threadCount; i++) {
+                executor.execute(() -> distributeService.startBots(20));
+            }
+        }
+        distributeService.stopBots();
+
+        List<Long> resultBuyerList = userFacade.getAllBuyerBotIds();
+        List<Long> resultSellerList = userFacade.getAllSellerBotIds();
+
+        assertThat(resultSellerList.size() + resultBuyerList.size()).isEqualTo(startBotAmount);
+        assertThat(resultSellerList.size()).isCloseTo(expectedHalf, within(1));
+        assertThat(resultBuyerList.size()).isCloseTo(expectedHalf, within(1));
+    }
+
+    @Test
+    void startBots_shouldDoNothing_whenNumberOfWorkerThreadsIsZero() {
+        distributeService.startBots(0);
+
+        List<Long> resultBuyerList = userFacade.getAllBuyerBotIds();
+        List<Long> resultSellerList = userFacade.getAllSellerBotIds();
+
+        assertThat(resultBuyerList.size()).isEqualTo(0);
+        assertThat(resultSellerList.size()).isEqualTo(0);
     }
 }
