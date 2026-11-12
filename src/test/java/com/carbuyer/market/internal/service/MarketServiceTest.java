@@ -362,4 +362,17 @@ public class MarketServiceTest {
 
         assertThat(resultCarId).isNull();
     }
+
+    @Test
+    void deleteListingsBySellerIds_shouldThrowEmptyInputCollectionException_whenSellerIdsListIsNull() {
+        assertThatThrownBy(() -> service.deleteListingsBySellerIds(null))
+                .isInstanceOf(EmptyInputCollectionException.class);
+    }
+
+    @Test
+    void deleteListingsBySellerIds_shouldWorksCorrectly_whenInputDataIsValid() {
+        List<Long> userIds = List.of(1L, 2L);
+
+        service.deleteListingsBySellerIds(userIds);
+    }
 }

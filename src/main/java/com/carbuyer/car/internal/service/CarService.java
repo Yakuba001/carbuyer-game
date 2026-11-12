@@ -4,6 +4,7 @@ import com.carbuyer.car.internal.entity.Car;
 import com.carbuyer.car.internal.entity.CarModels;
 import com.carbuyer.car.internal.repository.CarRepository;
 import com.carbuyer.exception.exceptions.CarNotFoundException;
+import com.carbuyer.exception.exceptions.EmptyInputCollectionException;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -59,6 +60,12 @@ public class CarService {
         jdbcTemplate.batchUpdate(sql, carParams, keyHolder, new String[]{"id"});
         return keyHolder.getKeyList().stream()
                 .map(map -> ((UUID) map.get("id"))).toList();
+    }
+
+    @Transactional
+    public void deleteCarsByOwnerIds(List<Long> ownerIds) {
+        if (ownerIds == null || ownerIds.isEmpty()) throw new EmptyInputCollectionException("Owner ids cannot be empty");
+        carRepository.deleteByOwnerIdIn(ownerIds);
     }
 
     private String vinGenerator() {

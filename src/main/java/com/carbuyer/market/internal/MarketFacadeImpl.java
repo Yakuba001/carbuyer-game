@@ -46,4 +46,9 @@ class MarketFacadeImpl implements MarketFacade {
     public UUID getListingCarId(UUID listingId) {
         return marketService.getListingCarId(listingId);
     }
+
+    @Override
+    public void deleteListingsBySellerIds(List<Long> sellerIds) {
+        marketService.deleteListingsBySellerIds(sellerIds);
+    }
 }

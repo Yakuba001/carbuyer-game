@@ -13,4 +13,5 @@ public interface GarageFacade {
     void changeEmptyGarageSlotStatusAndSetInItCarId(List<Long> userIds, List<UUID> carIds);
     void addGarageSlot(Long userId, int slotNumber);
     void addGarageSlots(List<Long> userIds);
+    void changeGarageStatusesFromOccupiedToEmptyByUserIds(List<Long> userIds);
 }

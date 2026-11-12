@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -157,12 +158,20 @@ public class MarketService {
         return listing.getCarId();
     }
 
+    @Transactional
+    public void deleteListingsBySellerIds(List<Long> sellerIds) {
+        if (sellerIds == null || sellerIds.isEmpty())
+            throw new EmptyInputCollectionException("Seller ids cannot be empty");
+        repository.deleteBySellerIdIn(sellerIds);
+    }
+
     private List<BigDecimal> priceGenerator(int size) {
-        double lowerBound = 100.00;
+        double lowerBound = 500.00;
         double upperBound = 1000.00;
         List<BigDecimal> priceList = new ArrayList<>(size);
         for (int i = 0; i < size; i++) {
-            priceList.add(new BigDecimal(ThreadLocalRandom.current().nextDouble(lowerBound, upperBound)));
+            priceList.add(new BigDecimal(ThreadLocalRandom.current().nextDouble(lowerBound, upperBound))
+                    .setScale(2, RoundingMode.HALF_UP));
         }
         return priceList;
     }

@@ -149,6 +149,31 @@ public class CarRepositoryIT extends DataJpaIntegrationTest {
         assertThat(result).isEmpty();
     }
 
+    @Test
+    void deleteByOwnerIdIn_shouldDeletedCarsInDbByOwnerIds_whenCarWithThisOwnerIdsExists() {
+        long firstUserId = 1L;
+        long secondUserId = 2L;
+        List<Long> ownerIds = List.of(firstUserId, secondUserId);
+        addUserToDb(firstUserId);
+        addTestCorrectCarToDb(firstUserId);
+        String username = "Bob1";
+        String userEmail = "bob1@g.com";
+        String userPassword = "bobby123";
+        jdbcTemplate.update("INSERT INTO users (id, name, email, password_hash) OVERRIDING SYSTEM VALUE " +
+                        "VALUES (?, ?, ?, ?)",
+                secondUserId, username, userEmail, userPassword);
+        addTestCorrectCarToDb(secondUserId);
+
+        long currCarsCount = carRepository.count();
+
+        carRepository.deleteByOwnerIdIn(ownerIds);
+
+        long resultCarsCount = carRepository.count();
+
+        assertThat(currCarsCount).isEqualTo(ownerIds.size());
+        assertThat(resultCarsCount).isEqualTo(0);
+    }
+
     private UUID addTestCorrectCarToDb(long userId) {
         String randomVin1 = UUID.randomUUID().toString().replace("-", "").substring(0, 17);
         String model = "Opel";

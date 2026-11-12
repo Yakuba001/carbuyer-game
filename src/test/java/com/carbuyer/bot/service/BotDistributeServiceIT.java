@@ -58,13 +58,13 @@ public class BotDistributeServiceIT extends BaseIntegrationTest {
 
     @Test
     void startBots_shouldWorkCorrectly_whenExecutedConcurrently() {
-        int startBotAmount = 11;
+        int startBotAmount = 5;
         int expectedHalf = startBotAmount / 2;
         ReflectionTestUtils.setField(botService, "START_FIX_BOTS_AMOUNT", startBotAmount);
 
         try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()){
             for (int i = 0; i < threadCount; i++) {
-                executor.execute(() -> distributeService.startBots(20));
+                executor.execute(() -> distributeService.startBots(5));
             }
         }
         distributeService.stopBots();
@@ -78,8 +78,8 @@ public class BotDistributeServiceIT extends BaseIntegrationTest {
     }
 
     @Test
-    void startBots_shouldDoNothing_whenNumberOfWorkerThreadsIsZero() {
-        distributeService.startBots(0);
+    void startBots_shouldDoNothing_whenNumberOfWorkerThreadsIsLowerThanFour() {
+        distributeService.startBots(3);
 
         List<Long> resultBuyerList = userFacade.getAllBuyerBotIds();
         List<Long> resultSellerList = userFacade.getAllSellerBotIds();

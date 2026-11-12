@@ -20,6 +20,8 @@ import java.util.stream.Collectors;
 @Slf4j
 public class GlobalExceptionHandler {
 
+    // TODO: rename methods..........
+
     @ExceptionHandler({
             EmailAlreadyExistsException.class,
             NameAlreadyExistsException.class,
@@ -87,6 +89,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleUserNotFound(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(new ErrorResponse(404, "Not found", ex.getMessage(), Instant.now()));
+    }
+
+    @ExceptionHandler(EmptyInputCollectionException.class)
+    public ResponseEntity<ErrorResponse> handleInternalServerError(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ErrorResponse(500, "Internal server error", ex.getMessage(), Instant.now()));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)

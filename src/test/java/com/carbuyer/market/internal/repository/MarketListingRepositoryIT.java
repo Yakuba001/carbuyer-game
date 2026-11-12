@@ -210,6 +210,43 @@ public class MarketListingRepositoryIT extends DataJpaIntegrationTest {
         assertThat(resultId).isNull();
     }
 
+    @Test
+    void deleteBySellerIdIn_shouldDeletedListingsInDbBySellerIds_whenListingsWithThisSellerIdsExists() {
+        long firstUserId = 1L;
+        long secondUserId = 2L;
+        List<Long> ownerIds = List.of(firstUserId, secondUserId);
+        String userPassword = "bobby123";
+        jdbcTemplate.update("INSERT INTO users (id, name, email, password_hash) OVERRIDING SYSTEM VALUE " +
+                        "VALUES (?, ?, ?, ?)",
+                firstUserId, "Bob", "bob@g.com", userPassword);
+        jdbcTemplate.update("INSERT INTO users (id, name, email, password_hash) OVERRIDING SYSTEM VALUE " +
+                        "VALUES (?, ?, ?, ?)",
+                secondUserId, "Bob1", "bob1@g.com", userPassword);
+        String randomVin1 = UUID.randomUUID().toString().replace("-", "").substring(0, 17);
+        String randomVin2 = UUID.randomUUID().toString().replace("-", "").substring(0, 17);
+        String model = "Opel";
+        int mileage = 10000;
+        int conditionScore = 85;
+        UUID firstCarId = UUID.randomUUID();
+        UUID secondCarId = UUID.randomUUID();
+        jdbcTemplate.update("INSERT INTO cars (id, vin, model, mileage, condition_score, owner_id) " +
+                        "VALUES (?, ?, ?, ?, ?, ?)",
+                firstCarId, randomVin1, model, mileage, conditionScore, firstUserId);
+        jdbcTemplate.update("INSERT INTO cars (id, vin, model, mileage, condition_score, owner_id) " +
+                        "VALUES (?, ?, ?, ?, ?, ?)",
+                secondCarId, randomVin2, model, mileage, conditionScore, secondUserId);
+        MarketListing firstListing = new MarketListing(firstCarId, firstUserId, null, testPrice);
+        MarketListing secondListing = new MarketListing(secondCarId, secondUserId, null, testPrice);
+        marketListingRepository.saveAllAndFlush(List.of(firstListing, secondListing));
+        long currCount = marketListingRepository.count();
+
+        marketListingRepository.deleteBySellerIdIn(ownerIds);
+        long resultCount = marketListingRepository.count();
+
+        assertThat(currCount).isEqualTo(ownerIds.size());
+        assertThat(resultCount).isEqualTo(0);
+    }
+
     private static Stream<MarketListing> nullFieldsInListingObjs() {
         MarketListing nullStatus = new MarketListing(TEST_CAR_ID, TEST_USER_ID, null, testPrice);
         nullStatus.setStatus(null);

@@ -3,6 +3,7 @@ package com.carbuyer.car.internal.service;
 import com.carbuyer.car.internal.entity.Car;
 import com.carbuyer.car.internal.repository.CarRepository;
 import com.carbuyer.exception.exceptions.CarNotFoundException;
+import com.carbuyer.exception.exceptions.EmptyInputCollectionException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -138,5 +139,17 @@ public class CarServiceTest {
         assertThat(result.size()).isEqualTo(ownerIds.size());
         assertThat(result.getFirst()).isEqualTo(uuid1);
         assertThat(result.getLast()).isEqualTo(uuid2);
+    }
+
+    @Test
+    void deleteCarsByOwnerIds_shouldThrowEmptyInputCollectionException_whenOwnerIdsListIsNull() {
+        assertThatThrownBy(() -> service.deleteCarsByOwnerIds(null)).isInstanceOf(EmptyInputCollectionException.class);
+    }
+
+    @Test
+    void deleteCarsByOwnerIds_shouldWorksCorrectly_whenInputArgIsValid() {
+        List<Long> ownerIds = List.of(1L, 2L);
+
+        service.deleteCarsByOwnerIds(ownerIds);
     }
 }

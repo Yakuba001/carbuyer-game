@@ -12,4 +12,5 @@ public interface MarketFacade {
     void buyCar(Long buyerId, UUID listingId);
     Long getBotSellerId(UUID listingId);
     UUID getListingCarId(UUID listingId);
+    void deleteListingsBySellerIds(List<Long> sellerIds);
 }
