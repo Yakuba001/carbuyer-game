@@ -13,7 +13,6 @@ import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
@@ -51,13 +50,12 @@ public class CarService {
                     param.addValue("model", modelGenerator());
                     param.addValue("mileage", mileageGenerator());
                     param.addValue("condition_score", conditionScoreGenerator());
-                    param.addValue("real_price", realPriceGenerator());
                     param.addValue("owner_id", ownerId);
                     return param;
                 }).toArray(MapSqlParameterSource[]::new);
         KeyHolder keyHolder = new GeneratedKeyHolder();
-        String sql = "INSERT INTO cars (vin, model, mileage, condition_score, real_price, owner_id) " +
-                "VALUES (:vin, :model, :mileage, :condition_score, :real_price, :owner_id)";
+        String sql = "INSERT INTO cars (vin, model, mileage, condition_score, owner_id) " +
+                "VALUES (:vin, :model, :mileage, :condition_score, :owner_id)";
         jdbcTemplate.batchUpdate(sql, carParams, keyHolder, new String[]{"id"});
         return keyHolder.getKeyList().stream()
                 .map(map -> ((UUID) map.get("id"))).toList();
@@ -78,9 +76,5 @@ public class CarService {
 
     private int conditionScoreGenerator() {
         return ThreadLocalRandom.current().nextInt(1, 101);
-    }
-
-    private BigDecimal realPriceGenerator() {
-        return BigDecimal.valueOf(ThreadLocalRandom.current().nextDouble(0, 10000));
     }
 }

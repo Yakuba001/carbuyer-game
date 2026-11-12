@@ -91,7 +91,6 @@ public class MarketServiceIT extends BaseIntegrationTest {
         String model = "Opel";
         int mileage = 10000;
         int conditionScore = 85;
-        BigDecimal price = new BigDecimal("123.21");
         BigDecimal listingPrice = new BigDecimal("50");
         List<String> usernames = IntStream.range(0, threadCount)
                 .mapToObj(i -> "name" + i)
@@ -103,8 +102,8 @@ public class MarketServiceIT extends BaseIntegrationTest {
                         "VALUES (?, ?, ?, ?)",
                 SELLER_ID, usernames.getFirst(), emails.getFirst(), password);
         jdbcTemplate.update("INSERT INTO user_balances (user_id, balance) VALUES (?, ?)", SELLER_ID, userBalance);
-        jdbcTemplate.update("INSERT INTO cars (id, vin, model, mileage, condition_score, real_price, owner_id) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?)", CAR_ID, randomVin1, model, mileage, conditionScore, price, SELLER_ID);
+        jdbcTemplate.update("INSERT INTO cars (id, vin, model, mileage, condition_score, owner_id) " +
+                "VALUES (?, ?, ?, ?, ?, ?)", CAR_ID, randomVin1, model, mileage, conditionScore, SELLER_ID);
         jdbcTemplate.update("INSERT INTO garage_slots (user_id, slot_number, car_id, status) VALUES (?, ?, ?, ?)",
                 SELLER_ID, slotNumber, CAR_ID, "OCCUPIED");
         jdbcTemplate.update("INSERT INTO market_listings (id, car_id, seller_id, price) OVERRIDING SYSTEM VALUE " +

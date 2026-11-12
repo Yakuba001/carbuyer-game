@@ -10,7 +10,6 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -34,9 +33,8 @@ public class CarRepositoryIT extends DataJpaIntegrationTest {
         String model = "Opel";
         int mileage = 10000;
         int conditionScore = 85;
-        BigDecimal price = new BigDecimal("123.21");
-        Car car = new Car(randomVin1, model, mileage, conditionScore, price, userId);
-        Car duplicateVin = new Car(randomVin1, model, mileage, conditionScore, price, userId);
+        Car car = new Car(randomVin1, model, mileage, conditionScore, userId);
+        Car duplicateVin = new Car(randomVin1, model, mileage, conditionScore, userId);
         carRepository.saveAndFlush(car);
 
         assertThatThrownBy(() -> carRepository.saveAndFlush(duplicateVin))
@@ -52,18 +50,6 @@ public class CarRepositoryIT extends DataJpaIntegrationTest {
 
         assertThatThrownBy(() -> jdbcTemplate.update("UPDATE cars SET mileage = ? WHERE owner_id = ?",
                 negativeMileage, userId))
-                .isInstanceOf(DataIntegrityViolationException.class);
-    }
-
-    @Test
-    void checkConstraintWhenFieldCanBeOnlyPositive_shouldThrowException_whenRealPriceLowerThanZero() {
-        long userId = 1L;
-        addUserToDb(userId);
-        addTestCorrectCarToDb(userId);
-        BigDecimal negativePrice = new BigDecimal("-1.00");
-
-        assertThatThrownBy(() -> jdbcTemplate.update("UPDATE cars SET real_price = ? WHERE owner_id = ?",
-                negativePrice, userId))
                 .isInstanceOf(DataIntegrityViolationException.class);
     }
 
@@ -104,7 +90,6 @@ public class CarRepositoryIT extends DataJpaIntegrationTest {
 
         assertThat(savedCar.getId()).isNotNull();
         assertThat(savedCar.getMileage()).isEqualTo(0);
-        assertThat(savedCar.getRealPrice()).isEqualTo("0.00");
         assertThat(savedCar.getCreatedAt()).isNotNull();
     }
 
@@ -169,8 +154,7 @@ public class CarRepositoryIT extends DataJpaIntegrationTest {
         String model = "Opel";
         int mileage = 10000;
         int conditionScore = 85;
-        BigDecimal price = new BigDecimal("123.21");
-        Car car = new Car(randomVin1, model, mileage, conditionScore, price, userId);
+        Car car = new Car(randomVin1, model, mileage, conditionScore, userId);
         carRepository.saveAndFlush(car);
         return car.getId();
     }

@@ -40,6 +40,7 @@ public class BotDistributeService implements AutoCloseable {
         boolean success = botService.updateStatus(ConfigStatus.IN_PROGRESS, ConfigStatus.NOT_ADDED);
         if (!success) {
             String currStatus = botService.getCurrentStatus();
+            log.info("Enter here");
             collectionSync();
             return new StartBotResponse(currStatus);
         }

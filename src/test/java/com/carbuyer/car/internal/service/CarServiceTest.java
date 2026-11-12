@@ -12,7 +12,6 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.support.KeyHolder;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -38,7 +37,7 @@ public class CarServiceTest {
         Long ownerId = 1L;
         Long sellerId = 1L;
         Car exampleCar =
-                new Car("228", "Opel", 100, 50, new BigDecimal("200"), ownerId);
+                new Car("228", "Opel", 100, 50, ownerId);
         when(carRepository.findForUpdateById(carId)).thenReturn(Optional.of(exampleCar));
 
         boolean result = service.isCarOwner(carId, sellerId);
@@ -59,7 +58,7 @@ public class CarServiceTest {
         UUID carId = UUID.randomUUID();
         Long ownerId = 1L;
         Car exampleCar =
-                new Car("228", "Opel", 100, 50, new BigDecimal("200"), ownerId);
+                new Car("228", "Opel", 100, 50, ownerId);
         when(carRepository.findForUpdateById(carId)).thenReturn(Optional.of(exampleCar));
 
         boolean result = service.isCarOwner(carId, null);
@@ -72,7 +71,7 @@ public class CarServiceTest {
         UUID carId = UUID.randomUUID();
         Long sellerId = 1L;
         Car exampleCar =
-                new Car("228", "Opel", 100, 50, new BigDecimal("200"), null);
+                new Car("228", "Opel", 100, 50, null);
         when(carRepository.findForUpdateById(carId)).thenReturn(Optional.of(exampleCar));
 
         boolean result = service.isCarOwner(carId, sellerId);
@@ -86,7 +85,7 @@ public class CarServiceTest {
         Long sellerId = 1L;
         Long ownerId = 2L;
         Car exampleCar =
-                new Car("228", "Opel", 100, 50, new BigDecimal("200"), ownerId);
+                new Car("228", "Opel", 100, 50, ownerId);
         when(carRepository.findForUpdateById(carId)).thenReturn(Optional.of(exampleCar));
 
         boolean result = service.isCarOwner(carId, sellerId);

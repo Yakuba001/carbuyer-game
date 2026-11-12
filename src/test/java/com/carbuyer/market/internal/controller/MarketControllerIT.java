@@ -188,9 +188,9 @@ public class MarketControllerIT extends MockMvcIntegrationTest {
     private void addCarToDb(long sellerId, UUID carId) {
         String randomVin = UUID.randomUUID().toString().replace("-", "").substring(0, 17);
         jdbcTemplate.update(
-                "INSERT INTO cars (id, vin, model, mileage, condition_score, real_price, owner_id) " +
-                        "VALUES (?, ?, ?, ?, ?, ?, ?)",
-                carId, randomVin, "Toyota Camry", 50000, 90, new BigDecimal("20"), sellerId);
+                "INSERT INTO cars (id, vin, model, mileage, condition_score, owner_id) " +
+                        "VALUES (?, ?, ?, ?, ?, ?)",
+                carId, randomVin, "Toyota Camry", 50000, 90, sellerId);
     }
 
     private CreateListingRequestDto insertSellerAndBuyerToDb(long sellerId, long buyerId) {
@@ -206,9 +206,9 @@ public class MarketControllerIT extends MockMvcIntegrationTest {
                 sellerId, "Bob", "bib@g.c", "secretPass");
         jdbcTemplate.update("INSERT INTO user_balances (user_id, balance) VALUES (?, ?)", sellerId, sellerBalance);
         jdbcTemplate.update(
-                "INSERT INTO cars (id, vin, model, mileage, condition_score, real_price, owner_id) " +
-                        "VALUES (?, ?, ?, ?, ?, ?, ?)",
-                TEST_CAR_ID, randomVin, "Toyota Camry", 50000, 90, new BigDecimal("20"), sellerId);
+                "INSERT INTO cars (id, vin, model, mileage, condition_score, owner_id) " +
+                        "VALUES (?, ?, ?, ?, ?, ?)",
+                TEST_CAR_ID, randomVin, "Toyota Camry", 50000, 90, sellerId);
         jdbcTemplate.update("INSERT INTO garage_slots (user_id, slot_number, car_id, status) VALUES (?, ?, ?, ?)",
                 sellerId, slotNumber, TEST_CAR_ID, "OCCUPIED");
 

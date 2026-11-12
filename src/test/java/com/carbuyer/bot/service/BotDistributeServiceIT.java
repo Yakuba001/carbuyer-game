@@ -2,8 +2,10 @@ package com.carbuyer.bot.service;
 
 import com.carbuyer.containers.BaseIntegrationTest;
 import com.carbuyer.user.api.UserFacade;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
@@ -22,6 +24,14 @@ public class BotDistributeServiceIT extends BaseIntegrationTest {
     private BotService botService;
     @Autowired
     private UserFacade userFacade;
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @AfterEach
+    public void tearDown() {
+        jdbcTemplate.execute("TRUNCATE TABLE users CASCADE");
+        jdbcTemplate.update("UPDATE bot_config SET status = 'NOT_ADDED' WHERE id = 1");
+    }
 
     @Test
     void startBots_shouldGoWellAndAvoidDeadLocks_whenScenarioIsHappyPath() {
