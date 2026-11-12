@@ -4,6 +4,7 @@ import com.carbuyer.car.internal.entity.Car;
 import com.carbuyer.car.internal.entity.CarModels;
 import com.carbuyer.car.internal.repository.CarRepository;
 import com.carbuyer.exception.exceptions.CarNotFoundException;
+import com.carbuyer.exception.exceptions.EmptyInputCollectionException;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
@@ -13,7 +14,6 @@ import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
@@ -51,16 +51,21 @@ public class CarService {
                     param.addValue("model", modelGenerator());
                     param.addValue("mileage", mileageGenerator());
                     param.addValue("condition_score", conditionScoreGenerator());
-                    param.addValue("real_price", realPriceGenerator());
                     param.addValue("owner_id", ownerId);
                     return param;
                 }).toArray(MapSqlParameterSource[]::new);
         KeyHolder keyHolder = new GeneratedKeyHolder();
-        String sql = "INSERT INTO cars (vin, model, mileage, condition_score, real_price, owner_id) " +
-                "VALUES (:vin, :model, :mileage, :condition_score, :real_price, :owner_id)";
+        String sql = "INSERT INTO cars (vin, model, mileage, condition_score, owner_id) " +
+                "VALUES (:vin, :model, :mileage, :condition_score, :owner_id)";
         jdbcTemplate.batchUpdate(sql, carParams, keyHolder, new String[]{"id"});
         return keyHolder.getKeyList().stream()
                 .map(map -> ((UUID) map.get("id"))).toList();
+    }
+
+    @Transactional
+    public void deleteCarsByOwnerIds(List<Long> ownerIds) {
+        if (ownerIds == null || ownerIds.isEmpty()) throw new EmptyInputCollectionException("Owner ids cannot be empty");
+        carRepository.deleteByOwnerIdIn(ownerIds);
     }
 
     private String vinGenerator() {
@@ -78,9 +83,5 @@ public class CarService {
 
     private int conditionScoreGenerator() {
         return ThreadLocalRandom.current().nextInt(1, 101);
-    }
-
-    private BigDecimal realPriceGenerator() {
-        return BigDecimal.valueOf(ThreadLocalRandom.current().nextDouble(0, 10000));
     }
 }

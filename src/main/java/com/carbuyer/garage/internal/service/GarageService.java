@@ -1,5 +1,6 @@
 package com.carbuyer.garage.internal.service;
 
+import com.carbuyer.exception.exceptions.EmptyInputCollectionException;
 import com.carbuyer.exception.exceptions.GarageSlotNotFoundException;
 import com.carbuyer.exception.exceptions.NoEmptySlotsException;
 import com.carbuyer.exception.exceptions.NotCarOwnerException;
@@ -98,5 +99,12 @@ public class GarageService {
                 .toArray(MapSqlParameterSource[]::new);
         String sql = "INSERT INTO garage_slots (user_id, slot_number, car_id) VALUES (:user_id, :slot_number, :car_id)";
         jdbcTemplate.batchUpdate(sql, garageSlotParams);
+    }
+
+    @Transactional
+    public void changeGarageStatusesFromOccupiedToEmptyByUserIds(List<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) throw new EmptyInputCollectionException("User ids cannot be empty");
+        int result = repository.realiseSlotsByUserIds(userIds);
+        if (result != userIds.size()) throw new GarageSlotNotFoundException("Not enough empty slots found for update");
     }
 }

@@ -96,7 +96,7 @@ public class GarageSlotRepositoryIT extends DataJpaIntegrationTest {
         addUserCarAndTestGarageToDb();
 
         assertThatThrownBy(() -> jdbcTemplate.update("INSERT INTO garage_slots " +
-                "(user_id, slot_number, car_id, status) VALUES (?, ?, ?, ?)",
+                        "(user_id, slot_number, car_id, status) VALUES (?, ?, ?, ?)",
                 TEST_USER_ID, TEST_SLOT_NUMBER, TEST_CAR_ID, "Invalid")
         ).isInstanceOf(DataIntegrityViolationException.class);
     }
@@ -163,6 +163,33 @@ public class GarageSlotRepositoryIT extends DataJpaIntegrationTest {
         long result = garageSlotRepository.count();
 
         assertThat(result).isEqualTo(expectedResult);
+    }
+
+    @Test
+    void realiseSlotsByUserIds_shouldChangeEachSlotStatusFromOccupiedToEmptyFromInputColl_whenCollectionIsNotEmpty() {
+        long firstUserId = 1L;
+        long secondUserId = 2L;
+        List<Long> ownerIds = List.of(firstUserId, secondUserId);
+        String userPassword = "bobby123";
+        jdbcTemplate.update("INSERT INTO users (id, name, email, password_hash) OVERRIDING SYSTEM VALUE " +
+                        "VALUES (?, ?, ?, ?)",
+                firstUserId, "Bob", "bob@g.com", userPassword);
+        jdbcTemplate.update("INSERT INTO users (id, name, email, password_hash) OVERRIDING SYSTEM VALUE " +
+                        "VALUES (?, ?, ?, ?)",
+                secondUserId, "Bob1", "bob1@g.com", userPassword);
+        GarageSlot firstSlot = new GarageSlot(firstUserId, TEST_SLOT_NUMBER, null, GarageSlotStatus.OCCUPIED);
+        GarageSlot secondSlot = new GarageSlot(secondUserId, TEST_SLOT_NUMBER, null, GarageSlotStatus.OCCUPIED);
+        garageSlotRepository.saveAllAndFlush(List.of(firstSlot, secondSlot));
+
+        garageSlotRepository.realiseSlotsByUserIds(ownerIds);
+
+        GarageSlot resultFirst = garageSlotRepository
+                .findFirstByUserIdAndStatus(ownerIds.getFirst(), GarageSlotStatus.EMPTY).orElse(null);
+        GarageSlot resultSecond = garageSlotRepository
+                .findFirstByUserIdAndStatus(ownerIds.getLast(), GarageSlotStatus.EMPTY).orElse(null);
+
+        assertThat(resultFirst).isNotNull();
+        assertThat(resultSecond).isNotNull();
     }
 
     private static Stream<GarageSlot> objWithNullElements() {

@@ -25,7 +25,6 @@ CREATE TABLE cars
     model           VARCHAR(64) NOT NULL,
     mileage         INTEGER NOT NULL DEFAULT 0 CHECK (mileage >= 0),
     condition_score INTEGER NOT NULL CHECK (condition_score BETWEEN 0 AND 100),
-    real_price      NUMERIC(15, 2) NOT NULL DEFAULT 0.00 CHECK (real_price >= 0),
     owner_id        BIGINT NOT NULL REFERENCES users(id) ON DELETE RESTRICT,
     created_at      TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

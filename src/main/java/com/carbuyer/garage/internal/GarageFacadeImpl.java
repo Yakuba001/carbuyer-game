@@ -49,4 +49,9 @@ class GarageFacadeImpl implements GarageFacade {
         service.addGarageSlots(userIds);
     }
 
+    @Override
+    public void changeGarageStatusesFromOccupiedToEmptyByUserIds(List<Long> userIds) {
+        service.changeGarageStatusesFromOccupiedToEmptyByUserIds(userIds);
+    }
+
 }

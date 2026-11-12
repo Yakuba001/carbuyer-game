@@ -3,6 +3,7 @@ package com.carbuyer.car.internal.service;
 import com.carbuyer.car.internal.entity.Car;
 import com.carbuyer.car.internal.repository.CarRepository;
 import com.carbuyer.exception.exceptions.CarNotFoundException;
+import com.carbuyer.exception.exceptions.EmptyInputCollectionException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -12,7 +13,6 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.support.KeyHolder;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -38,7 +38,7 @@ public class CarServiceTest {
         Long ownerId = 1L;
         Long sellerId = 1L;
         Car exampleCar =
-                new Car("228", "Opel", 100, 50, new BigDecimal("200"), ownerId);
+                new Car("228", "Opel", 100, 50, ownerId);
         when(carRepository.findForUpdateById(carId)).thenReturn(Optional.of(exampleCar));
 
         boolean result = service.isCarOwner(carId, sellerId);
@@ -59,7 +59,7 @@ public class CarServiceTest {
         UUID carId = UUID.randomUUID();
         Long ownerId = 1L;
         Car exampleCar =
-                new Car("228", "Opel", 100, 50, new BigDecimal("200"), ownerId);
+                new Car("228", "Opel", 100, 50, ownerId);
         when(carRepository.findForUpdateById(carId)).thenReturn(Optional.of(exampleCar));
 
         boolean result = service.isCarOwner(carId, null);
@@ -72,7 +72,7 @@ public class CarServiceTest {
         UUID carId = UUID.randomUUID();
         Long sellerId = 1L;
         Car exampleCar =
-                new Car("228", "Opel", 100, 50, new BigDecimal("200"), null);
+                new Car("228", "Opel", 100, 50, null);
         when(carRepository.findForUpdateById(carId)).thenReturn(Optional.of(exampleCar));
 
         boolean result = service.isCarOwner(carId, sellerId);
@@ -86,7 +86,7 @@ public class CarServiceTest {
         Long sellerId = 1L;
         Long ownerId = 2L;
         Car exampleCar =
-                new Car("228", "Opel", 100, 50, new BigDecimal("200"), ownerId);
+                new Car("228", "Opel", 100, 50, ownerId);
         when(carRepository.findForUpdateById(carId)).thenReturn(Optional.of(exampleCar));
 
         boolean result = service.isCarOwner(carId, sellerId);
@@ -139,5 +139,17 @@ public class CarServiceTest {
         assertThat(result.size()).isEqualTo(ownerIds.size());
         assertThat(result.getFirst()).isEqualTo(uuid1);
         assertThat(result.getLast()).isEqualTo(uuid2);
+    }
+
+    @Test
+    void deleteCarsByOwnerIds_shouldThrowEmptyInputCollectionException_whenOwnerIdsListIsNull() {
+        assertThatThrownBy(() -> service.deleteCarsByOwnerIds(null)).isInstanceOf(EmptyInputCollectionException.class);
+    }
+
+    @Test
+    void deleteCarsByOwnerIds_shouldWorksCorrectly_whenInputArgIsValid() {
+        List<Long> ownerIds = List.of(1L, 2L);
+
+        service.deleteCarsByOwnerIds(ownerIds);
     }
 }

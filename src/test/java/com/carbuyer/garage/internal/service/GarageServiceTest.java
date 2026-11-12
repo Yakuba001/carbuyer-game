@@ -1,5 +1,6 @@
 package com.carbuyer.garage.internal.service;
 
+import com.carbuyer.exception.exceptions.EmptyInputCollectionException;
 import com.carbuyer.exception.exceptions.GarageSlotNotFoundException;
 import com.carbuyer.exception.exceptions.NoEmptySlotsException;
 import com.carbuyer.exception.exceptions.NotCarOwnerException;
@@ -174,5 +175,28 @@ public class GarageServiceTest {
         garageService.addGarageSlots(userIds);
 
         verify(jdbcTemplate).batchUpdate(any(String.class), any(MapSqlParameterSource[].class));
+    }
+
+    @Test
+    void changeGarageStatusesFromOccupiedToEmptyByUserIds_shouldThrowEmptyCollectionEx_whenCollectionsSizeNull() {
+        assertThatThrownBy(() -> garageService.changeGarageStatusesFromOccupiedToEmptyByUserIds(null))
+                .isInstanceOf(EmptyInputCollectionException.class);
+    }
+
+    @Test
+    void changeGarageStatusesFromOccupiedToEmptyByUserIds_shouldThrowGarageNotFoundEx_whenNotEnoughRowsChanged() {
+        List<Long> userIds = List.of(1L, 2L);
+        when(garageSlotRepository.realiseSlotsByUserIds(anyList())).thenReturn(1);
+
+        assertThatThrownBy(() -> garageService.changeGarageStatusesFromOccupiedToEmptyByUserIds(userIds))
+                .isInstanceOf(GarageSlotNotFoundException.class);
+    }
+
+    @Test
+    void changeGarageStatusesFromOccupiedToEmptyByUserIds_shouldWorksWell_whenCollectionNonNullOrEmpty() {
+        when(garageSlotRepository.realiseSlotsByUserIds(anyList())).thenReturn(2);
+        List<Long> userIds = List.of(1L, 2L);
+
+        garageService.changeGarageStatusesFromOccupiedToEmptyByUserIds(userIds);
     }
 }

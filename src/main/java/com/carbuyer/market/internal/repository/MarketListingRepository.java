@@ -7,9 +7,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -27,4 +29,7 @@ public interface MarketListingRepository extends JpaRepository<MarketListing, UU
     SELECT l.seller_id FROM market_listings l JOIN users u ON l.seller_id = u.id WHERE l.id = :id AND u.is_bot = true
     """, nativeQuery = true)
     Optional<Long> findBotSellerId(@Param("id") UUID id);
+    @Modifying
+    @Query("DELETE FROM MarketListing l WHERE l.sellerId IN :sellerIds")
+    void deleteBySellerIdIn(@Param("sellerIds") List<Long> sellerIds);
 }

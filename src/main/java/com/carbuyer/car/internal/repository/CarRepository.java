@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -23,4 +24,7 @@ public interface CarRepository extends JpaRepository<Car, UUID> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT c FROM Car c WHERE c.id = :carId")
     Optional<Car> findForUpdateById(@Param("carId") UUID carId);
+    @Modifying
+    @Query("DELETE FROM Car c WHERE c.ownerId IN :ownerIds")
+    void deleteByOwnerIdIn(@Param("ownerIds") List<Long> ownerIds);
 }

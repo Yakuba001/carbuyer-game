@@ -28,4 +28,9 @@ public class CarFacadeImpl implements CarFacade {
     public List<UUID> addCarsByIds(List<Long> ownerIds) {
         return service.addCarsAndSetNewOwners(ownerIds);
     }
+
+    @Override
+    public void deleteCarsByOwnerIds(List<Long> ownerIds) {
+        service.deleteCarsByOwnerIds(ownerIds);
+    }
 }
