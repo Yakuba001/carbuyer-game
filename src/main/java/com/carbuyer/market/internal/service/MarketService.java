@@ -141,7 +141,7 @@ public class MarketService {
         repository.save(listing);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public UUID getRandomActiveListingId() {
         return repository.findRandomActiveListingId().orElse(null);
     }
