@@ -22,7 +22,7 @@ public interface MarketListingRepository extends JpaRepository<MarketListing, UU
     @Query("SELECT m FROM MarketListing m WHERE m.id = :id")
     Optional<MarketListing> findByIdForUpdate(@Param("id") UUID id);
     @Query(value = """
-    SELECT l.id FROM market_listings l WHERE l.status = 'ACTIVE' ORDER BY random() LIMIT 1
+    SELECT l.id FROM market_listings l WHERE l.status = 'ACTIVE' ORDER BY random() LIMIT 1 FOR UPDATE SKIP LOCKED
     """, nativeQuery = true)
     Optional<UUID> findRandomActiveListingId();
     @Query(value = """
