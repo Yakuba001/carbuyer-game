@@ -1,7 +1,5 @@
 package com.carbuyer.bot.repository;
 
-import com.carbuyer.bot.entity.BotConfig;
-import com.carbuyer.bot.entity.ConfigStatus;
 import com.carbuyer.containers.DataJpaIntegrationTest;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

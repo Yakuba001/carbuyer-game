@@ -3,6 +3,7 @@ package com.carbuyer.exception;
 import com.carbuyer.exception.dto.ErrorResponse;
 import com.carbuyer.exception.exceptions.*;
 import jakarta.persistence.PessimisticLockException;
+import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -66,7 +67,9 @@ public class GlobalExceptionHandler {
             ChangeCarOwnerException.class,
             InvalidBotDataException.class,
             BotConfigNotFoundException.class,
-            BotCreationException.class})
+            BotCreationException.class,
+            ConstraintViolationException.class,
+            InvalidBotAmountException.class,})
     public ResponseEntity<ErrorResponse> handleMissedData(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorResponse(400, "Bad request", ex.getMessage(), Instant.now()));
@@ -91,7 +94,9 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(404, "Not found", ex.getMessage(), Instant.now()));
     }
 
-    @ExceptionHandler(EmptyInputCollectionException.class)
+    @ExceptionHandler({
+            EmptyInputCollectionException.class,
+            StartBotsException.class})
     public ResponseEntity<ErrorResponse> handleInternalServerError(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(new ErrorResponse(500, "Internal server error", ex.getMessage(), Instant.now()));

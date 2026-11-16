@@ -62,15 +62,6 @@ CREATE TABLE market_listings
     CONSTRAINT check_anti_self_buy CHECK (buyer_id IS NULL OR seller_id <> buyer_id)
 );
 
-CREATE TABLE bot_config
-(
-    id              INTEGER PRIMARY KEY DEFAULT 1,
-    active_bots     INTEGER DEFAULT 0 NOT NULL,
-    status          VARCHAR(20) NOT NULL DEFAULT 'NOT_ADDED',
-    CONSTRAINT      check_single_row CHECK (id = 1),
-    CONSTRAINT      check_correct_status_type CHECK (status IN ('NOT_ADDED', 'IN_PROGRESS', 'ADDED'))
-);
-
 ALTER SEQUENCE garage_slots_id_seq OWNED BY garage_slots.id;
 
 CREATE INDEX idx_garage_slots_user_status ON garage_slots (user_id, status);
@@ -78,8 +69,6 @@ CREATE UNIQUE INDEX idx_garage_slots_car_unique ON garage_slots (car_id) WHERE c
 
 CREATE INDEX idx_market_listings_feed ON market_listings (created_at DESC) WHERE status = 'ACTIVE';
 CREATE UNIQUE INDEX idx_market_listings_one_active_car ON market_listings (car_id) WHERE status = 'ACTIVE';
-
-INSERT INTO bot_config (id, active_bots) VALUES (1, 0);
 
 CREATE INDEX idx_market_listings_seller_active ON market_listings (seller_id) WHERE status = 'ACTIVE';
 
