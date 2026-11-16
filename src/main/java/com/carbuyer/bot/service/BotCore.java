@@ -6,6 +6,7 @@ import com.carbuyer.garage.api.GarageFacade;
 import com.carbuyer.market.api.MarketFacade;
 import com.carbuyer.user.api.UserFacade;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,7 +22,8 @@ import java.util.concurrent.ThreadLocalRandom;
 @RequiredArgsConstructor
 public class BotCore {
 
-    private final static int START_FIX_BOTS_AMOUNT = 1000;
+    @Value("${app.bot.initial-size:1000}")
+    private int START_FIX_BOTS_AMOUNT;
 
     private final UserFacade userFacade;
     private final CarFacade carFacade;

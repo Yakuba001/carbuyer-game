@@ -86,6 +86,7 @@ app:
     initial-balance: "1000.00"
 
   bot:
+    initial-size: 1000
     think-time:
       min: 1000ms
       max: 5000ms

@@ -55,7 +55,6 @@ public class BotServiceIT extends BaseIntegrationTest {
     @AfterEach
     public void tearDown() {
         jdbcTemplate.getJdbcTemplate().execute("TRUNCATE TABLE users CASCADE");
-        jdbcTemplate.getJdbcTemplate().update("UPDATE bot_config SET status = 'NOT_ADDED' WHERE id = 1");
     }
 
     @Test
