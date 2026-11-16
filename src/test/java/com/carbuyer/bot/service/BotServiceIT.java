@@ -1,110 +1,161 @@
 package com.carbuyer.bot.service;
 
-import com.carbuyer.bot.dto.StartBotResponse;
-import com.carbuyer.bot.entity.BotAddedStatus;
-import com.carbuyer.bot.entity.ConfigStatus;
-import com.carbuyer.bot.repository.BotConfigRepository;
 import com.carbuyer.containers.BaseIntegrationTest;
-import com.carbuyer.exception.exceptions.BotCreationException;
+import com.carbuyer.market.api.MarketFacade;
+import com.carbuyer.user.api.UserFacade;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.mock.mockito.SpyBean;
-import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
+import org.springframework.jdbc.support.KeyHolder;
+import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
+import java.math.BigDecimal;
 import java.util.List;
-import java.util.concurrent.*;
+import java.util.Objects;
+import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.Mockito.doThrow;
+import static org.assertj.core.api.Assertions.within;
 
 public class BotServiceIT extends BaseIntegrationTest {
 
-    @SpyBean
-    private BotService botService;
+    private static final Logger log = LoggerFactory.getLogger(BotServiceIT.class);
     @Autowired
-    BotDistributeService distributeService;
+    private BotService distributeService;
     @Autowired
-    private JdbcTemplate jdbcTemplate;
+    private BotCore botCore;
     @Autowired
-    private BotConfigRepository botConfigRepository;
+    private UserFacade userFacade;
+    @Autowired
+    private NamedParameterJdbcTemplate jdbcTemplate;
+    @Autowired
+    private MarketFacade marketFacade;
+
+    @Autowired
+    private PlatformTransactionManager transactionManager;
+    private TransactionTemplate txTemplate;
+
+    @BeforeEach
+    public void setup() {
+        this.txTemplate = new TransactionTemplate(transactionManager);
+    }
 
     @AfterEach
-    void tearDown() {
-        jdbcTemplate.execute("TRUNCATE TABLE users CASCADE");
-        jdbcTemplate.execute("TRUNCATE TABLE bot_config CASCADE");
-        jdbcTemplate.update("INSERT INTO bot_config (id, active_bots) VALUES (?, ?)", 1, 0);
+    public void tearDown() {
+        jdbcTemplate.getJdbcTemplate().execute("TRUNCATE TABLE users CASCADE");
     }
 
     @Test
-    void botAdderManager_generalHappyPathTest() {
-        CountDownLatch startLatch = new CountDownLatch(1);
-        CountDownLatch endLatch = new CountDownLatch(threadCount);
-        List<StartBotResponse> resultResponseList = new CopyOnWriteArrayList<>();
+    void startBots_shouldGoWellAndAvoidDeadLocks_whenScenarioIsHappyPath() {
+        int startBotAmount = 11;
+        int expectedHalf = startBotAmount / 2;
+        ReflectionTestUtils.setField(botCore, "START_FIX_BOTS_AMOUNT", startBotAmount);
+        distributeService.startBots(10);
+
+        try {
+            TimeUnit.SECONDS.sleep(5);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
+        distributeService.stopBots();
+
+        List<Long> resultBuyerList = userFacade.getAllBuyerBotIds();
+        List<Long> resultSellerList = userFacade.getAllSellerBotIds();
+
+        assertThat(resultSellerList.size() + resultBuyerList.size()).isEqualTo(startBotAmount);
+        assertThat(resultSellerList.size()).isCloseTo(expectedHalf, within(1));
+        assertThat(resultBuyerList.size()).isCloseTo(expectedHalf, within(1));
+    }
+
+    @Test
+    void startBots_shouldWorkCorrectly_whenExecutedConcurrently() {
+        int startBotAmount = 5;
+        int expectedHalf = startBotAmount / 2;
+        ReflectionTestUtils.setField(botCore, "START_FIX_BOTS_AMOUNT", startBotAmount);
+
         try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
             for (int i = 0; i < threadCount; i++) {
-                executor.execute(() -> {
-                    try {
-                        startLatch.await();
-                        resultResponseList.add(distributeService.botAdderManager());
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    } finally {
-                        endLatch.countDown();
-                    }
-                });
+                executor.execute(() -> distributeService.startBots(5));
             }
-            try {
-                startLatch.countDown();
-                endLatch.await();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-            StartBotResponse finalStatus = distributeService.botAdderManager();
-
-            assertThat(resultResponseList.size()).isEqualTo(threadCount);
-            assertThat(finalStatus.status()).isEqualTo(BotAddedStatus.BOTS_ADDED.toString());
         }
+        distributeService.stopBots();
+
+        List<Long> resultBuyerList = userFacade.getAllBuyerBotIds();
+        List<Long> resultSellerList = userFacade.getAllSellerBotIds();
+
+        assertThat(resultSellerList.size()).isCloseTo(expectedHalf, within(1));
+        assertThat(resultBuyerList.size()).isCloseTo(expectedHalf, within(1));
     }
 
     @Test
-    void addBots_oneThreadHappyPathTest() {
-        CountDownLatch startLatch = new CountDownLatch(1);
-        CountDownLatch endLatch = new CountDownLatch(1);
-        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
-            executor.execute(() -> {
-                try {
-                    startLatch.await();
-                    long startTime = System.nanoTime();
-                    botService.addBots();
-                    long endTime = System.nanoTime();
-                    long durationMs = (endTime - startTime) / 1000000;
-                    System.out.println("Execution time: " + (durationMs / 1000.0) + " seconds");
+    void startBots_shouldRebalancingCollections_whenRatioIsNotCorrect() {
+        int startBotAmount = 6;
+        int expectedHalf = startBotAmount / 2;
+        ReflectionTestUtils.setField(botCore, "START_FIX_BOTS_AMOUNT", startBotAmount);
+        long userId;
+        String username = "Bob";
+        String email = "bob@g.com";
+        String password = "password";
+        int maxSlots = 5;
+        BigDecimal userBalance = new BigDecimal("1000000");
 
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                } finally {
-                    endLatch.countDown();
+        try {
+            distributeService.startBots(2);
+            KeyHolder keyHolder = new GeneratedKeyHolder();
+            MapSqlParameterSource userParam = new MapSqlParameterSource();
+            userParam.addValue("name", username);
+            userParam.addValue("email", email);
+            userParam.addValue("password", password);
+            userParam.addValue("maxSlots", maxSlots);
+            String userInsertSql = "INSERT INTO users (name, email, password_hash, max_slots) " +
+                    "VALUES (:name, :email, :password, :maxSlots)";
+            jdbcTemplate.update(userInsertSql, userParam, keyHolder, new String[]{"id"});
+            userId = Objects.requireNonNull(keyHolder.getKey()).longValue();
+            jdbcTemplate.getJdbcTemplate()
+                    .update("INSERT INTO user_balances (user_id, balance) VALUES (?, ?)", userId, userBalance);
+            MapSqlParameterSource[] slotParams = IntStream.range(0, maxSlots)
+                    .mapToObj(i -> {
+                        MapSqlParameterSource param = new MapSqlParameterSource();
+                        param.addValue("userId", userId);
+                        param.addValue("slotNumber", i);
+                        return param;
+                    }).toArray(MapSqlParameterSource[]::new);
+            String sql = "INSERT INTO garage_slots (user_id, slot_number) VALUES (:userId, :slotNumber)";
+            jdbcTemplate.batchUpdate(sql, slotParams);
+            txTemplate.executeWithoutResult(status -> {
+                for (int i = 0; i < 3; i++) {
+                    UUID currListingId = marketFacade.getRandomListingId();
+                    if (currListingId == null) {
+                        log.warn("listingId is null");
+                        break;
+                    }
+                    marketFacade.buyCar(userId, currListingId);
                 }
             });
-            startLatch.countDown();
-            try {
-                endLatch.await();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
+            TimeUnit.SECONDS.sleep(3);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        } finally {
+            distributeService.stopBots();
         }
-    }
 
-    @Test
-    void botAdderManager_shouldRollbackStatusToNotAdded_whenAddBotsThrowsException() {
-        doThrow(new RuntimeException("Artificial error in cycle"))
-                .when(botService).addBots();
+        List<Long> resultBuyerList = userFacade.getAllBuyerBotIds();
+        List<Long> resultSellerList = userFacade.getAllSellerBotIds();
 
-        assertThatThrownBy(() -> distributeService.botAdderManager()).isInstanceOf(BotCreationException.class);
-
-        ConfigStatus finalStatus = ConfigStatus.valueOf(botConfigRepository.getConfigStatus());
-        assertThat(finalStatus).isEqualTo(ConfigStatus.NOT_ADDED);
+        assertThat(resultSellerList.size()).isCloseTo(expectedHalf, within(1));
+        assertThat(resultBuyerList.size()).isCloseTo(expectedHalf, within(1));
     }
 }
