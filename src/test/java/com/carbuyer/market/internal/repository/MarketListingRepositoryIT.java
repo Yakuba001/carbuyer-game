@@ -3,6 +3,7 @@ package com.carbuyer.market.internal.repository;
 import com.carbuyer.containers.DataJpaIntegrationTest;
 import com.carbuyer.market.internal.entity.ListingStatus;
 import com.carbuyer.market.internal.entity.MarketListing;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -15,13 +16,13 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.*;
 
 @Transactional
 public class MarketListingRepositoryIT extends DataJpaIntegrationTest {
@@ -30,6 +31,8 @@ public class MarketListingRepositoryIT extends DataJpaIntegrationTest {
     private MarketListingRepository marketListingRepository;
     @Autowired
     private JdbcTemplate jdbcTemplate;
+    @Autowired
+    private EntityManager em;
 
     private final static Long TEST_USER_ID = 1L;
     private final static UUID TEST_CAR_ID = UUID.randomUUID();
@@ -245,6 +248,35 @@ public class MarketListingRepositoryIT extends DataJpaIntegrationTest {
 
         assertThat(currCount).isEqualTo(ownerIds.size());
         assertThat(resultCount).isEqualTo(0);
+    }
+
+    @Test
+    void decreaseBotListingPrice_shouldDecreaseBotListingPrice_whenQueryConditionsAreCorrect() {
+        String username = "Bob";
+        String userEmail = "bob@g.com";
+        String userPassword = "bobby123";
+        jdbcTemplate.update("INSERT INTO users (id, name, email, password_hash, is_bot) OVERRIDING SYSTEM VALUE " +
+                        "VALUES (?, ?, ?, ?, ?)",
+                TEST_USER_ID, username, userEmail, userPassword, true);
+        addTestCorrectCarToDb(TEST_CAR_ID);
+        UUID listingId = UUID.randomUUID();
+        jdbcTemplate.update("INSERT INTO market_listings (id, car_id, seller_id, price) " +
+                "VALUES (?, ?, ?, ?)", listingId, TEST_CAR_ID, TEST_USER_ID, testPrice);
+        MarketListing currListing = marketListingRepository.findById(listingId).orElse(null);
+        assertThat(currListing).isNotNull();
+        BigDecimal currListingPrice = currListing.getPrice();
+        BigDecimal expectedPrice = currListingPrice.multiply(new BigDecimal("0.90"))
+                .setScale(2, RoundingMode.HALF_UP);
+
+        marketListingRepository.decreaseBotListingPrice(listingId);
+        em.flush();
+        em.clear();
+
+        MarketListing resultListing = marketListingRepository.findById(listingId).orElse(null);
+        assertThat(resultListing).isNotNull();
+        BigDecimal resultListingPrice = resultListing.getPrice();
+
+        assertThat(resultListingPrice).isCloseTo(expectedPrice, within(new BigDecimal("0.01")));
     }
 
     private static Stream<MarketListing> nullFieldsInListingObjs() {

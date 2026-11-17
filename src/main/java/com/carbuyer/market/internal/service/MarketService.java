@@ -126,10 +126,10 @@ public class MarketService {
             emptyGarageSlotId = garageFacade.getGarageSlotIdByUserIdAndStatus(buyerId, EMPTY_GARAGE_SLOT);
         }
         if (buyerBalance.compareTo(listing.getPrice()) < 0) {
-            throw new InsufficientFundsException("You don`t have enough funds");
+            throw new InsufficientFundsException("You don`t have enough funds", listingId);
         }
         if (!userFacade.carPurchase(buyerId, sellerId, buyerBalance, sellerBalance, listing.getPrice())) {
-            throw new InsufficientFundsException("Something went wrong");
+            throw new InsufficientFundsException("Something went wrong", listingId);
         }
         if (!carFacade.setNewCarOwner(sellerId, buyerId, carId)) {
             throw new ChangeCarOwnerException("Something went wrong");
@@ -163,6 +163,11 @@ public class MarketService {
         if (sellerIds == null || sellerIds.isEmpty())
             throw new EmptyInputCollectionException("Seller ids cannot be empty");
         repository.deleteBySellerIdIn(sellerIds);
+    }
+
+    @Transactional
+    public void decreaseBotListingPrice(UUID listingId) {
+        repository.decreaseBotListingPrice(listingId);
     }
 
     private List<BigDecimal> priceGenerator(int size) {

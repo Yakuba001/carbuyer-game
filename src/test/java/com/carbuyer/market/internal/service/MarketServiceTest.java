@@ -375,4 +375,11 @@ public class MarketServiceTest {
 
         service.deleteListingsBySellerIds(userIds);
     }
+
+    @Test
+    void decreaseBotListingPrice_shouldInvokeDecreaseBotListingPrice() {
+        service.decreaseBotListingPrice(TEST_LISTING_ID);
+
+        verify(repository).decreaseBotListingPrice(any(UUID.class));
+    }
 }

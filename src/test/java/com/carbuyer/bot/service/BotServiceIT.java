@@ -57,6 +57,7 @@ public class BotServiceIT extends BaseIntegrationTest {
         jdbcTemplate.getJdbcTemplate().execute("TRUNCATE TABLE users CASCADE");
     }
 
+    // TODO: refactor it, need avoid boilerplate and use mb one test with whole logic
     @Test
     void startBots_shouldGoWellAndAvoidDeadLocks_whenScenarioIsHappyPath() {
         int startBotAmount = 11;

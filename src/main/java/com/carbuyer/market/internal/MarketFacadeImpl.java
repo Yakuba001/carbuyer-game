@@ -51,4 +51,9 @@ class MarketFacadeImpl implements MarketFacade {
     public void deleteListingsBySellerIds(List<Long> sellerIds) {
         marketService.deleteListingsBySellerIds(sellerIds);
     }
+
+    @Override
+    public void decreaseListingPrice(UUID listingId) {
+        marketService.decreaseBotListingPrice(listingId);
+    }
 }
