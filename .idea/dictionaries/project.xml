@@ -4,6 +4,7 @@
       <w>bcar</w>
       <w>isready</w>
       <w>pgdata</w>
+      <w>postgre</w>
     </words>
   </dictionary>
 </component>

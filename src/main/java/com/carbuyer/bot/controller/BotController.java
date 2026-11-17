@@ -17,7 +17,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -47,30 +46,20 @@ public class BotController {
                             mediaType = "application/json",
                             schema = @Schema(implementation = ErrorResponse.class)
                     )),
-            @ApiResponse(responseCode = "401", description = "Unauthorized",
-                    content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(implementation = ErrorResponse.class)
-                    )),
             @ApiResponse(responseCode = "403", description = "Access denied",
-                    content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(implementation = ErrorResponse.class)
-                    )),
-            @ApiResponse(responseCode = "500", description = "Unexpected error occurred",
                     content = @Content(
                             mediaType = "application/json",
                             schema = @Schema(implementation = ErrorResponse.class)
                     ))
     })
-    public ResponseEntity<StartBotResponse> addBots(@Min(1) @Max(999) @PathVariable int amount) {
+    public ResponseEntity<StartBotResponse> startBots(@Min(1) @Max(999) @PathVariable int amount) {
         StartBotResponse response = service.startBots(amount);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(response);
     }
 
-    @GetMapping("/stop")
+    @PostMapping("/stop")
     @Operation(
             summary = "Stop worker threads",
             description = "Stopping all bots processes"
@@ -80,11 +69,6 @@ public class BotController {
                     content = @Content(
                             mediaType = "application/json",
                             schema = @Schema(implementation = StopBotResponse.class)
-                    )),
-            @ApiResponse(responseCode = "401", description = "Unauthorized",
-                    content = @Content(
-                            mediaType = "application/json",
-                            schema = @Schema(implementation = ErrorResponse.class)
                     )),
             @ApiResponse(responseCode = "403", description = "Access denied",
                     content = @Content(
