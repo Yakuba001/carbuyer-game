@@ -44,33 +44,29 @@ public class BotService implements AutoCloseable {
     private final AtomicInteger iterationCounter = new AtomicInteger(0);
 
     public synchronized StartBotResponse startBots(int numberOfWorkerThreads) {
-        if (isBotsRunning || numberOfWorkerThreads <= 0)
-            if (isBotsRunning) {
-                return new StartBotResponse(BotStatus.ALREADY_STARTED.toString(), currentWorkersAmount);
-            } else {
-                throw new InvalidBotAmountException("Number of worker threads must be greater than 0");
-            }
+        if (isBotsRunning) {
+            return new StartBotResponse(BotStatus.ALREADY_STARTED.toString(), currentWorkersAmount);
+        }
+        if (numberOfWorkerThreads <= 0) {
+            throw new InvalidBotAmountException("Number of worker threads must be greater than 0");
+        }
         try {
-            botCore.addBots();
-            collectionSync();
-            isBotsRunning = true;
-            threadPool = Executors.newVirtualThreadPerTaskExecutor();
-            for (int i = 0; i < numberOfWorkerThreads; i++) {
-                threadPool.execute(this::runSimulationLoop);
+            if (!botCore.isBotsAlreadyExistsInDb()) {
+                botCore.addBots();
             }
-            currentWorkersAmount = numberOfWorkerThreads;
+            threadStarter(numberOfWorkerThreads);
             return new StartBotResponse(BotStatus.SUCCESSFULLY_STARTED.toString(), currentWorkersAmount);
         } catch (Exception e) {
-            isBotsRunning = false;
+            stopBots();
             throw new StartBotsException("An unexpected error occurred while starting bots", e);
         }
     }
 
     public synchronized StopBotResponse stopBots() {
-        isBotsRunning = false;
         close();
         return new StopBotResponse(BotStatus.STOPPED.toString());
     }
+
     // TODO: should try to add netherlands auction to avoid financial bot problems.
     private void runSimulationLoop() {
         while (isBotsRunning && !Thread.currentThread().isInterrupted()) {
@@ -202,8 +198,20 @@ public class BotService implements AutoCloseable {
         return resultIds;
     }
 
+    private void threadStarter(int numberOfWorkerThreads) {
+        collectionSync();
+        isBotsRunning = true;
+        currentWorkersAmount = numberOfWorkerThreads;
+        threadPool = Executors.newVirtualThreadPerTaskExecutor();
+        for (int i = 0; i < numberOfWorkerThreads; i++) {
+            threadPool.execute(this::runSimulationLoop);
+        }
+    }
+
     @Override
-    public void close() {
+    public synchronized void close() {
+        isBotsRunning = false;
+        currentWorkersAmount = 0;
         if (threadPool != null) {
             threadPool.shutdown();
             try {
@@ -213,6 +221,8 @@ public class BotService implements AutoCloseable {
             } catch (InterruptedException e) {
                 threadPool.shutdownNow();
                 Thread.currentThread().interrupt();
+            } finally {
+                threadPool = null;
             }
         }
     }

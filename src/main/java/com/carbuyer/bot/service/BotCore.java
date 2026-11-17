@@ -74,6 +74,14 @@ public class BotCore {
         else return userFacade.getAllBuyerBotIds();
     }
 
+    @Transactional(readOnly = true)
+    public boolean isBotsAlreadyExistsInDb() {
+        List<Long> numberOfExistingBots = new ArrayList<>();
+        numberOfExistingBots.addAll(userFacade.getAllSellerBotIds());
+        numberOfExistingBots.addAll(userFacade.getAllBuyerBotIds());
+        return numberOfExistingBots.size() == START_FIX_BOTS_AMOUNT;
+    }
+
     private BigDecimal priceGenerator() {
         double lowerBound = 500.00;
         double upperBound = 1000.00;
