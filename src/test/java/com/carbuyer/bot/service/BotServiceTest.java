@@ -23,12 +23,8 @@ public class BotServiceTest {
 
     @Mock
     private BotCore botCore;
-    @Mock
-    private UserFacade userFacade;
-    @Mock
-    private MarketFacade marketFacade;
     @InjectMocks
     private BotService distributeService;
 
-
+    // TODO: unit tests...........
 }

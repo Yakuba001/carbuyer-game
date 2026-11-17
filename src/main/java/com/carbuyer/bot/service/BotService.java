@@ -54,7 +54,13 @@ public class BotService implements AutoCloseable {
             if (!botCore.isBotsAlreadyExistsInDb()) {
                 botCore.addBots();
             }
-            threadStarter(numberOfWorkerThreads);
+            collectionSync();
+            isBotsRunning = true;
+            currentWorkersAmount = numberOfWorkerThreads;
+            threadPool = Executors.newVirtualThreadPerTaskExecutor();
+            for (int i = 0; i < numberOfWorkerThreads; i++) {
+                threadPool.execute(this::runSimulationLoop);
+            }
             return new StartBotResponse(BotStatus.SUCCESSFULLY_STARTED.toString(), currentWorkersAmount);
         } catch (Exception e) {
             stopBots();
@@ -66,7 +72,7 @@ public class BotService implements AutoCloseable {
         close();
         return new StopBotResponse(BotStatus.STOPPED.toString());
     }
-
+    // TODO: concurrency problem when threads working with queues, need use second reentrant lock to avoid duplicates and errors in future
     private void runSimulationLoop() {
         while (isBotsRunning && !Thread.currentThread().isInterrupted()) {
             try {
@@ -195,16 +201,6 @@ public class BotService implements AutoCloseable {
             }
         }
         return resultIds;
-    }
-
-    private void threadStarter(int numberOfWorkerThreads) {
-        collectionSync();
-        isBotsRunning = true;
-        currentWorkersAmount = numberOfWorkerThreads;
-        threadPool = Executors.newVirtualThreadPerTaskExecutor();
-        for (int i = 0; i < numberOfWorkerThreads; i++) {
-            threadPool.execute(this::runSimulationLoop);
-        }
     }
 
     @Override
