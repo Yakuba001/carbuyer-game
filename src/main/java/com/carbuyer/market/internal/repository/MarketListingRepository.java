@@ -32,4 +32,14 @@ public interface MarketListingRepository extends JpaRepository<MarketListing, UU
     @Modifying
     @Query("DELETE FROM MarketListing l WHERE l.sellerId IN :sellerIds")
     void deleteBySellerIdIn(@Param("sellerIds") List<Long> sellerIds);
+    @Modifying
+    @Query(value = """
+    UPDATE market_listings l SET price = GREATEST(0.00, ROUND(l.price * 0.90, 2) - 0.01)
+    FROM users u WHERE l.id = :listingId
+                         AND l.status = 'ACTIVE'
+                         AND l.price > 0
+                         AND l.seller_id = u.id
+                         AND u.is_bot = TRUE
+    """, nativeQuery = true)
+    void decreaseBotListingPrice(@Param("listingId") UUID listingId);
 }

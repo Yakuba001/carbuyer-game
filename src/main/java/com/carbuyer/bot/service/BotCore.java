@@ -2,6 +2,7 @@ package com.carbuyer.bot.service;
 
 import com.carbuyer.bot.dto.PurchaseResult;
 import com.carbuyer.car.api.CarFacade;
+import com.carbuyer.exception.exceptions.InsufficientFundsException;
 import com.carbuyer.garage.api.GarageFacade;
 import com.carbuyer.market.api.MarketFacade;
 import com.carbuyer.user.api.UserFacade;
@@ -48,8 +49,15 @@ public class BotCore {
             return null;
         }
         Long sellerId = marketFacade.getBotSellerId(listingId);
-        marketFacade.buyCar(buyerId, listingId);
-        return new PurchaseResult(listingId, listingCarId, sellerId);
+        try {
+            marketFacade.buyCar(buyerId, listingId);
+            return new PurchaseResult(listingId, listingCarId, sellerId);
+        } catch (InsufficientFundsException e) {
+            if (e.getListingId() != null) {
+                marketFacade.decreaseListingPrice(e.getListingId());
+            }
+            return null;
+        }
     }
 
     public void listingCreator(Long buyerId, UUID listingCarId) {
@@ -76,10 +84,7 @@ public class BotCore {
 
     @Transactional(readOnly = true)
     public boolean isBotsAlreadyExistsInDb() {
-        List<Long> numberOfExistingBots = new ArrayList<>();
-        numberOfExistingBots.addAll(userFacade.getAllSellerBotIds());
-        numberOfExistingBots.addAll(userFacade.getAllBuyerBotIds());
-        return numberOfExistingBots.size() == START_FIX_BOTS_AMOUNT;
+        return userFacade.getAllSellerBotIds().size() + userFacade.getAllBuyerBotIds().size() == START_FIX_BOTS_AMOUNT;
     }
 
     private BigDecimal priceGenerator() {

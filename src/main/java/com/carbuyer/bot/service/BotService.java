@@ -67,7 +67,6 @@ public class BotService implements AutoCloseable {
         return new StopBotResponse(BotStatus.STOPPED.toString());
     }
 
-    // TODO: should try to add netherlands auction to avoid financial bot problems.
     private void runSimulationLoop() {
         while (isBotsRunning && !Thread.currentThread().isInterrupted()) {
             try {
