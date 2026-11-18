@@ -107,6 +107,31 @@ public class UserRepositoryIT extends DataJpaIntegrationTest {
         assertThat(resultIdsList.size()).isEqualTo(amount / 2);
     }
 
+    @Test
+    void findLimitedSellerBotIds_shouldReturnFirstSellerBotIds_whenLimitIsCorrect() {
+        int numberOfSellers = 20;
+        int expectedAmount = 10;
+        addBotsAndListingsInDb(numberOfSellers);
+
+        List<Long> resultIdsList = userRepository.findLimitedSellerBotIds(expectedAmount);
+
+        assertThat(resultIdsList.size()).isEqualTo(expectedAmount);
+    }
+
+    @Test
+    void findLimitedBuyerBotIds_shouldReturnFirstBuyerBotIds_whenLimitIsCorrect() {
+        int numberOfSellers = 20;
+        int expectedAmount = 1;
+        addBotsAndListingsInDb(numberOfSellers);
+        User buyerBot = new User("Buyer", "buyer@g.c", TEST_PASSWORD);
+        buyerBot.setBot(true);
+        userRepository.saveAndFlush(buyerBot);
+
+        List<Long> resultIdsList = userRepository.findLimitedBuyerBotIds(expectedAmount + numberOfSellers / 2);
+
+        assertThat(resultIdsList.size()).isEqualTo(expectedAmount);
+    }
+
     private void addBotsAndListingsInDb(int amount) {
         List<User> bots = new ArrayList<>(amount);
         List<UUID> carIds = new ArrayList<>(amount / 2);

@@ -58,11 +58,12 @@ public class BotServiceIT extends BaseIntegrationTest {
     }
 
     // TODO: refactor it, need avoid boilerplate and use mb one test with whole logic
+    // TODO: remember about start/stop situation when need check activate/deactivate bots
     @Test
     void startBots_shouldGoWellAndAvoidDeadLocks_whenScenarioIsHappyPath() {
         int startBotAmount = 11;
         int expectedHalf = startBotAmount / 2;
-        ReflectionTestUtils.setField(botCore, "START_FIX_BOTS_AMOUNT", startBotAmount);
+        ReflectionTestUtils.setField(botCore, "startFixBotsAmount", startBotAmount);
         distributeService.startBots(10);
 
         try {
@@ -85,7 +86,7 @@ public class BotServiceIT extends BaseIntegrationTest {
     void startBots_shouldWorkCorrectly_whenExecutedConcurrently() {
         int startBotAmount = 5;
         int expectedHalf = startBotAmount / 2;
-        ReflectionTestUtils.setField(botCore, "START_FIX_BOTS_AMOUNT", startBotAmount);
+        ReflectionTestUtils.setField(botCore, "startFixBotsAmount", startBotAmount);
 
         try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
             for (int i = 0; i < threadCount; i++) {
@@ -105,7 +106,7 @@ public class BotServiceIT extends BaseIntegrationTest {
     void startBots_shouldRebalancingCollections_whenRatioIsNotCorrect() {
         int startBotAmount = 6;
         int expectedHalf = startBotAmount / 2;
-        ReflectionTestUtils.setField(botCore, "START_FIX_BOTS_AMOUNT", startBotAmount);
+        ReflectionTestUtils.setField(botCore, "startFixBotsAmount", startBotAmount);
         long userId;
         String username = "Bob";
         String email = "bob@g.com";
