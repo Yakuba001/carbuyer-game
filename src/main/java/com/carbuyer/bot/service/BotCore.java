@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
@@ -24,19 +25,42 @@ import java.util.concurrent.ThreadLocalRandom;
 public class BotCore {
 
     @Value("${app.bot.initial-size:1000}")
-    private int START_FIX_BOTS_AMOUNT;
+    private int startFixBotsAmount;
 
     private final UserFacade userFacade;
     private final CarFacade carFacade;
     private final GarageFacade garageFacade;
     private final MarketFacade marketFacade;
-
-    public void addBots() {
-        List<Long> allAddedBotIds = userFacade.addBots(START_FIX_BOTS_AMOUNT);
+    // TODO: write unit tests...
+    public void addBots(int count) {
+        if (count <= 0) return;
+        List<Long> allAddedBotIds = userFacade.addBots(count);
         List<Long> sellers = new ArrayList<>(allAddedBotIds.subList(0, allAddedBotIds.size() / 2));
-        List<UUID> carIds = carFacade.addCarsByIds(sellers);
-        garageFacade.changeEmptyGarageSlotStatusAndSetInItCarId(sellers, carIds);
-        marketFacade.createListings(sellers, carIds);
+        if (!sellers.isEmpty()) {
+            List<UUID> carIds = carFacade.addCarsByIds(sellers);
+            garageFacade.changeEmptyGarageSlotStatusAndSetInItCarId(sellers, carIds);
+            marketFacade.createListings(sellers, carIds);
+        }
+    }
+    // TODO: write unit tests...
+    @Transactional
+    public void syncBotsCountInDb() {
+        List<Long> allBuyers = userFacade.getAllBuyerBotIds();
+        List<Long> allSellers = userFacade.getAllSellerBotIds();
+        int currentTotal = allBuyers.size() + allSellers.size();
+        if (currentTotal < startFixBotsAmount) {
+            int botsToCreate = startFixBotsAmount - currentTotal;
+            addBots(botsToCreate);
+        } else if (currentTotal > startFixBotsAmount) {
+            int excessCount = currentTotal - startFixBotsAmount;
+            List<Long> sellersToDeactivate = allSellers.stream()
+                    .sorted(Comparator.reverseOrder())
+                    .limit(excessCount)
+                    .toList();
+            if (!sellersToDeactivate.isEmpty()) {
+                carAndListingDeleter(sellersToDeactivate);
+            }
+        }
     }
 
     public PurchaseResult executeBotCarPurchase(Long buyerId) {
@@ -78,13 +102,8 @@ public class BotCore {
 
     @Transactional(readOnly = true)
     public List<Long> getIds(boolean isSeller) {
-        if (isSeller) return userFacade.getAllSellerBotIds();
-        else return userFacade.getAllBuyerBotIds();
-    }
-
-    @Transactional(readOnly = true)
-    public boolean isBotsAlreadyExistsInDb() {
-        return userFacade.getAllSellerBotIds().size() + userFacade.getAllBuyerBotIds().size() == START_FIX_BOTS_AMOUNT;
+        if (isSeller) return userFacade.getLimitedSellerBotIds(startFixBotsAmount);
+        else return userFacade.getLimitedBuyerBotIds(startFixBotsAmount);
     }
 
     private BigDecimal priceGenerator() {

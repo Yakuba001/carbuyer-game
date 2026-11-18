@@ -161,6 +161,14 @@ public class UserService {
         return userRepository.findActiveSellerBotIds();
     }
 
+    public List<Long> getLimitedSellerBotIds(int limit) {
+        return userRepository.findLimitedSellerBotIds(limit);
+    }
+
+    public List<Long> getLimitedBuyerBotIds(int limit) {
+        return userRepository.findLimitedBuyerBotIds(limit);
+    }
+
     private void dataBaseExceptionResolver(DataIntegrityViolationException ex) {
         if (ex.getCause() instanceof ConstraintViolationException err) {
             String constraintName = err.getConstraintName();

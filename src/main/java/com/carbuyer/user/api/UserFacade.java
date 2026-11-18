@@ -22,4 +22,6 @@ public interface UserFacade {
     List<Long> addBots(int amount);
     List<Long> getAllBuyerBotIds();
     List<Long> getAllSellerBotIds();
+    List<Long> getLimitedSellerBotIds(int limit);
+    List<Long> getLimitedBuyerBotIds(int limit);
 }

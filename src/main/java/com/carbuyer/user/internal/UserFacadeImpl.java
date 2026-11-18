@@ -84,4 +84,14 @@ public class UserFacadeImpl implements UserFacade {
     public List<Long> getAllSellerBotIds() {
         return service.getAllSellerBotIds();
     }
+
+    @Override
+    public List<Long> getLimitedSellerBotIds(int limit) {
+        return service.getLimitedSellerBotIds(limit);
+    }
+
+    @Override
+    public List<Long> getLimitedBuyerBotIds(int limit) {
+        return service.getLimitedBuyerBotIds(limit);
+    }
 }

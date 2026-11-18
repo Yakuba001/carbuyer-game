@@ -4,6 +4,7 @@ import com.carbuyer.bot.dto.PurchaseResult;
 import com.carbuyer.bot.dto.StartBotResponse;
 import com.carbuyer.bot.dto.StopBotResponse;
 import com.carbuyer.bot.entity.BotStatus;
+import com.carbuyer.bot.util.ConcurrentUniqueQueue;
 import com.carbuyer.exception.exceptions.StartBotsException;
 import com.carbuyer.exception.exceptions.InvalidBotAmountException;
 import lombok.RequiredArgsConstructor;
@@ -28,8 +29,8 @@ public class BotService implements AutoCloseable {
     private int currentWorkersAmount;
     private volatile boolean isBotsRunning = false;
 
-    private final Deque<Long> buyerIds = new ConcurrentLinkedDeque<>();
-    private final Deque<Long> sellerIds = new ConcurrentLinkedDeque<>();
+    private final ConcurrentUniqueQueue<Long> buyerIds = new ConcurrentUniqueQueue<>();
+    private final ConcurrentUniqueQueue<Long> sellerIds = new ConcurrentUniqueQueue<>();
     private final Set<Long> inFlightBots = ConcurrentHashMap.newKeySet();
 
     @Value("${app.bot.think-time.min:1000}")
@@ -38,7 +39,8 @@ public class BotService implements AutoCloseable {
     private Duration maxThinkTime;
     private static final double MIN_RATIO_THRESHOLD = 0.30;
     private static final double TARGET_RATIO = 0.50;
-    private static final int SYNC_EVERY_N_ITERATIONS = 10;
+    @Value("${app.bot.initial-size}")
+    private int syncEveryNIterations;
 
     private final ReentrantLock resizeRatioLock = new ReentrantLock();
     private final AtomicInteger iterationCounter = new AtomicInteger(0);
@@ -51,19 +53,30 @@ public class BotService implements AutoCloseable {
             throw new InvalidBotAmountException("Number of worker threads must be greater than 0");
         }
         try {
-            if (!botCore.isBotsAlreadyExistsInDb()) {
-                botCore.addBots();
-            }
+            botCore.syncBotsCountInDb();
             collectionSync();
+            int totalBotsInSys = buyerIds.size() + sellerIds.size();
+            if (totalBotsInSys == 0) {
+                throw new StartBotsException("No bots available in db to start simulation");
+            }
+            int maxSafeWorkers = Math.max(1, (int) (totalBotsInSys * TARGET_RATIO));
+            int effectiveWorkers = Math.min(numberOfWorkerThreads, maxSafeWorkers);
+            if (effectiveWorkers < numberOfWorkerThreads) {
+                log.warn("Requested {} worker threads, but capped to {} (50% of {} total bots) to prevent starvation",
+                        numberOfWorkerThreads, effectiveWorkers, totalBotsInSys);
+            }
             isBotsRunning = true;
-            currentWorkersAmount = numberOfWorkerThreads;
+            currentWorkersAmount = effectiveWorkers;
             threadPool = Executors.newVirtualThreadPerTaskExecutor();
-            for (int i = 0; i < numberOfWorkerThreads; i++) {
+            for (int i = 0; i < effectiveWorkers; i++) {
                 threadPool.execute(this::runSimulationLoop);
             }
             return new StartBotResponse(BotStatus.SUCCESSFULLY_STARTED.toString(), currentWorkersAmount);
         } catch (Exception e) {
             stopBots();
+            if (e instanceof StartBotsException sbe) {
+                throw sbe;
+            }
             throw new StartBotsException("An unexpected error occurred while starting bots", e);
         }
     }
@@ -72,7 +85,7 @@ public class BotService implements AutoCloseable {
         close();
         return new StopBotResponse(BotStatus.STOPPED.toString());
     }
-    // TODO: concurrency problem when threads working with queues, need use second reentrant lock to avoid duplicates and errors in future
+
     private void runSimulationLoop() {
         while (isBotsRunning && !Thread.currentThread().isInterrupted()) {
             try {
@@ -83,6 +96,7 @@ public class BotService implements AutoCloseable {
                 Long buyerId = buyerIds.pollFirst();
                 if (buyerId == null) {
                     tryRebalance(true);
+                    TimeUnit.MILLISECONDS.sleep(100);
                     continue;
                 }
                 inFlightBots.add(buyerId);
@@ -92,20 +106,19 @@ public class BotService implements AutoCloseable {
                         inFlightBots.remove(buyerId);
                         buyerIds.addLast(buyerId);
                         tryRebalance(true);
+                        TimeUnit.MILLISECONDS.sleep(100);
                         continue;
                     }
-                    UUID listingId = purchaseResult.listingId();
                     UUID listingCarId = purchaseResult.carId();
                     Long sellerId = purchaseResult.sellerId();
+                    if (sellerId != null && this.sellerIds.remove(sellerId)) {
+                        this.buyerIds.addLast(sellerId);
+                        log.info("Bot {} bought a car from Bot {}", buyerId, sellerId);
+                    }
                     botCore.listingCreator(buyerId, listingCarId);
                     this.sellerIds.addLast(buyerId);
-                    if (sellerId != null) {
-                        this.sellerIds.remove(sellerId);
-                        this.buyerIds.addLast(sellerId);
-                        log.info("Bot {} bought a car from Bot {} (Listing: {})", buyerId, sellerId, listingId);
-                        log.info("New listing is created");
-                    }
-                    boolean forceSync = iterationCounter.incrementAndGet() % SYNC_EVERY_N_ITERATIONS == 0;
+                    int syncInterval = Math.max(100, syncEveryNIterations);
+                    boolean forceSync = iterationCounter.incrementAndGet() % syncInterval == 0;
                     tryRebalance(forceSync);
                 } catch (Exception e) {
                     this.buyerIds.addLast(buyerId);
@@ -135,35 +148,32 @@ public class BotService implements AutoCloseable {
             }
             double buyerRatio = (double) buyerCount / totalBots;
             double sellerRatio = (double) sellerCount / totalBots;
-            log.info("Buyer count: {}, seller count: {}, inFlight: {}", buyerCount, sellerCount, inFlightBots.size());
             if (sellerRatio < MIN_RATIO_THRESHOLD) {
-                List<Long> buyerIdsToCreateNewCarsAndListings =
-                        getIdsCollectionToRebalance(true, totalBots, sellerCount);
-                if (buyerIdsToCreateNewCarsAndListings.isEmpty()) {
+                List<Long> buyerIdsToCreate = getIdsCollectionToRebalance(true, totalBots, sellerCount);
+                if (buyerIdsToCreate.isEmpty()) {
                     return;
                 }
                 try {
-                    botCore.carAndListingCreator(buyerIdsToCreateNewCarsAndListings);
+                    botCore.carAndListingCreator(buyerIdsToCreate);
+                    sellerIds.addAll(buyerIdsToCreate);
+                    log.info("Rebalancing seller sequence: converted {} buyers to sellers", buyerIdsToCreate.size());
                 } catch (Exception e) {
-                    return;
+                    buyerIds.addAll(buyerIdsToCreate);
+                    log.warn("Failed to rebalance, returned {} bots to buyer queue", buyerIdsToCreate.size(), e);
                 }
-                sellerIds.addAll(buyerIdsToCreateNewCarsAndListings);
-                log.info("Rebalancing seller sequence: converted {} buyers to sellers",
-                        buyerIdsToCreateNewCarsAndListings.size());
             } else if (buyerRatio < MIN_RATIO_THRESHOLD) {
-                List<Long> sellerIdsToDeleteHisCarsAndListings =
-                        getIdsCollectionToRebalance(false, totalBots, buyerCount);
-                if (sellerIdsToDeleteHisCarsAndListings.isEmpty()) {
+                List<Long> sellerIdsToDelete = getIdsCollectionToRebalance(false, totalBots, buyerCount);
+                if (sellerIdsToDelete.isEmpty()) {
                     return;
                 }
                 try {
-                    botCore.carAndListingDeleter(sellerIdsToDeleteHisCarsAndListings);
+                    botCore.carAndListingDeleter(sellerIdsToDelete);
+                    buyerIds.addAll(sellerIdsToDelete);
+                    log.info("Rebalancing buyer sequence: converted {} sellers to buyers", sellerIdsToDelete.size());
                 } catch (Exception e) {
-                    return;
+                    sellerIds.addAll(sellerIdsToDelete);
+                    log.warn("Failed to rebalance, returned {} bots to seller queue", sellerIdsToDelete.size(), e);
                 }
-                buyerIds.addAll(sellerIdsToDeleteHisCarsAndListings);
-                log.info("Rebalancing buyer sequence: converted {} sellers to buyers",
-                        sellerIdsToDeleteHisCarsAndListings.size());
             }
         } finally {
             resizeRatioLock.unlock();
@@ -171,20 +181,12 @@ public class BotService implements AutoCloseable {
     }
 
     private void collectionSync() {
-        List<Long> buyerIds = botCore.getIds(false);
-        List<Long> sellerIds = botCore.getIds(true);
-        this.buyerIds.clear();
-        this.sellerIds.clear();
-        for (Long id : buyerIds) {
-            if (!inFlightBots.contains(id)) {
-                this.buyerIds.addLast(id);
-            }
-        }
-        for (Long id : sellerIds) {
-            if (!inFlightBots.contains(id)) {
-                this.sellerIds.addLast(id);
-            }
-        }
+        Set<Long> freshBuyers = new HashSet<>(botCore.getIds(false));
+        Set<Long> freshSellers = new HashSet<>(botCore.getIds(true));
+        freshBuyers.removeAll(inFlightBots);
+        freshSellers.removeAll(inFlightBots);
+        this.buyerIds.syncWith(freshBuyers, inFlightBots);
+        this.sellerIds.syncWith(freshSellers, inFlightBots);
     }
 
     private List<Long> getIdsCollectionToRebalance(boolean isSeller, int totalBots, int currCount) {
