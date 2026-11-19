@@ -31,9 +31,9 @@ public class BotCore {
     private final CarFacade carFacade;
     private final GarageFacade garageFacade;
     private final MarketFacade marketFacade;
-    // TODO: write unit tests...
+
     public void addBots(int count) {
-        if (count <= 0) return;
+        if (count < 2) return;
         List<Long> allAddedBotIds = userFacade.addBots(count);
         List<Long> sellers = new ArrayList<>(allAddedBotIds.subList(0, allAddedBotIds.size() / 2));
         if (!sellers.isEmpty()) {
@@ -42,11 +42,12 @@ public class BotCore {
             marketFacade.createListings(sellers, carIds);
         }
     }
-    // TODO: write unit tests...
+
     @Transactional
     public void syncBotsCountInDb() {
         List<Long> allBuyers = userFacade.getAllBuyerBotIds();
         List<Long> allSellers = userFacade.getAllSellerBotIds();
+        if (allBuyers == null || allSellers == null) return;
         int currentTotal = allBuyers.size() + allSellers.size();
         if (currentTotal < startFixBotsAmount) {
             int botsToCreate = startFixBotsAmount - currentTotal;
