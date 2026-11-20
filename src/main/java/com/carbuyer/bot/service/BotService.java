@@ -44,6 +44,7 @@ public class BotService implements AutoCloseable {
 
     private final ReentrantLock resizeRatioLock = new ReentrantLock();
     private final AtomicInteger iterationCounter = new AtomicInteger(0);
+    private CountDownLatch stopLatch = new CountDownLatch(1);
 
     public synchronized StartBotResponse startBots(int numberOfWorkerThreads) {
         if (isBotsRunning) {
@@ -68,8 +69,10 @@ public class BotService implements AutoCloseable {
             isBotsRunning = true;
             currentWorkersAmount = effectiveWorkers;
             threadPool = Executors.newVirtualThreadPerTaskExecutor();
+            CountDownLatch currentLatch = new CountDownLatch(1);
+            this.stopLatch = currentLatch;
             for (int i = 0; i < effectiveWorkers; i++) {
-                threadPool.execute(this::runSimulationLoop);
+                threadPool.execute(() -> runSimulationLoop(currentLatch));
             }
             return new StartBotResponse(BotStatus.SUCCESSFULLY_STARTED.toString(), currentWorkersAmount);
         } catch (Exception e) {
@@ -86,17 +89,19 @@ public class BotService implements AutoCloseable {
         return new StopBotResponse(BotStatus.STOPPED.toString());
     }
 
-    private void runSimulationLoop() {
+    private void runSimulationLoop(CountDownLatch currentLatch) {
         while (isBotsRunning && !Thread.currentThread().isInterrupted()) {
             try {
                 long minMs = minThinkTime.toMillis();
                 long maxMs = maxThinkTime.toMillis();
                 long thinkTimeMs = (minMs >= maxMs) ? minMs : ThreadLocalRandom.current().nextLong(minMs, maxMs);
-                TimeUnit.MILLISECONDS.sleep(thinkTimeMs);
+                if (currentLatch.await(thinkTimeMs, TimeUnit.MILLISECONDS)) {
+                    break;
+                }
                 Long buyerId = buyerIds.pollFirst();
                 if (buyerId == null) {
                     tryRebalance(true);
-                    TimeUnit.MILLISECONDS.sleep(100);
+                    if (currentLatch.await(100, TimeUnit.MILLISECONDS)) break;
                     continue;
                 }
                 inFlightBots.add(buyerId);
@@ -106,7 +111,7 @@ public class BotService implements AutoCloseable {
                         inFlightBots.remove(buyerId);
                         buyerIds.addLast(buyerId);
                         tryRebalance(true);
-                        TimeUnit.MILLISECONDS.sleep(100);
+                        if (currentLatch.await(100, TimeUnit.MILLISECONDS)) break;
                         continue;
                     }
                     UUID listingCarId = purchaseResult.carId();
@@ -210,6 +215,7 @@ public class BotService implements AutoCloseable {
         isBotsRunning = false;
         currentWorkersAmount = 0;
         if (threadPool != null) {
+            stopLatch.countDown();
             threadPool.shutdown();
             try {
                 if (!threadPool.awaitTermination(10, TimeUnit.SECONDS)) {
