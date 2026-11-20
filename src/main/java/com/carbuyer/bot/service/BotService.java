@@ -69,10 +69,8 @@ public class BotService implements AutoCloseable {
             isBotsRunning = true;
             currentWorkersAmount = effectiveWorkers;
             threadPool = Executors.newVirtualThreadPerTaskExecutor();
-
             CountDownLatch currentLatch = new CountDownLatch(1);
             this.stopLatch = currentLatch;
-
             for (int i = 0; i < effectiveWorkers; i++) {
                 threadPool.execute(() -> runSimulationLoop(currentLatch));
             }

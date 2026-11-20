@@ -150,7 +150,7 @@ public class CarRepositoryIT extends DataJpaIntegrationTest {
     }
 
     @Test
-    void deleteByOwnerIdIn_shouldDeletedCarsInDbByOwnerIds_whenCarWithThisOwnerIdsExists() {
+    void deleteByOwnerIdIn_shouldDeletedCarsInDbByOwnerIds_whenCarWithThisOwnerIdsExistsAndUserIsBot() {
         long firstUserId = 1L;
         long secondUserId = 2L;
         List<Long> ownerIds = List.of(firstUserId, secondUserId);
@@ -159,9 +159,9 @@ public class CarRepositoryIT extends DataJpaIntegrationTest {
         String username = "Bob1";
         String userEmail = "bob1@g.com";
         String userPassword = "bobby123";
-        jdbcTemplate.update("INSERT INTO users (id, name, email, password_hash) OVERRIDING SYSTEM VALUE " +
-                        "VALUES (?, ?, ?, ?)",
-                secondUserId, username, userEmail, userPassword);
+        jdbcTemplate.update("INSERT INTO users (id, name, email, password_hash, is_bot) OVERRIDING SYSTEM VALUE " +
+                        "VALUES (?, ?, ?, ?, ?)",
+                secondUserId, username, userEmail, userPassword, true);
         addTestCorrectCarToDb(secondUserId);
 
         long currCarsCount = carRepository.count();
@@ -171,7 +171,7 @@ public class CarRepositoryIT extends DataJpaIntegrationTest {
         long resultCarsCount = carRepository.count();
 
         assertThat(currCarsCount).isEqualTo(ownerIds.size());
-        assertThat(resultCarsCount).isEqualTo(0);
+        assertThat(resultCarsCount).isEqualTo(1);
     }
 
     private UUID addTestCorrectCarToDb(long userId) {

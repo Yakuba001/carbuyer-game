@@ -64,7 +64,8 @@ public class CarService {
 
     @Transactional
     public void deleteCarsByOwnerIds(List<Long> ownerIds) {
-        if (ownerIds == null || ownerIds.isEmpty()) throw new EmptyInputCollectionException("Owner ids cannot be empty");
+        if (ownerIds == null || ownerIds.isEmpty())
+            throw new EmptyInputCollectionException("Owner ids cannot be empty");
         carRepository.deleteByOwnerIdIn(ownerIds);
     }
 
