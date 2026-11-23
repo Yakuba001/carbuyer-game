@@ -19,6 +19,7 @@ import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @Transactional
 public class GarageSlotRepositoryIT extends DataJpaIntegrationTest {
@@ -34,11 +35,12 @@ public class GarageSlotRepositoryIT extends DataJpaIntegrationTest {
     private static final int TEST_SLOT_NUMBER = 1;
     private static final UUID TEST_CAR_ID = UUID.randomUUID();
 
+    // TODO: need to refactor it too
+
     @ParameterizedTest
     @MethodSource("objWithNullElements")
     void checkNotNullConstraints_shouldThrowException_whenInputFieldsAreNull(GarageSlot garageSlot) {
-        assertThatThrownBy(() -> garageSlotRepository.saveAndFlush(garageSlot))
-                .isInstanceOf(DataIntegrityViolationException.class);
+        assertThrows(DataIntegrityViolationException.class, () -> garageSlotRepository.saveAndFlush(garageSlot));
     }
 
     @Test
@@ -48,8 +50,9 @@ public class GarageSlotRepositoryIT extends DataJpaIntegrationTest {
         jdbcTemplate.update("INSERT INTO garage_slots (user_id, slot_number, car_id) VALUES (?, ?, ?)",
                 TEST_USER_ID, TEST_SLOT_NUMBER, TEST_CAR_ID);
 
-        GarageSlot result = garageSlotRepository.findByUserIdAndCarId(TEST_USER_ID, TEST_CAR_ID).orElseThrow();
+        GarageSlot result = garageSlotRepository.findByUserIdAndCarId(TEST_USER_ID, TEST_CAR_ID).orElse(null);
 
+        assertThat(result).isNotNull();
         assertThat(result.getId()).isNotNull();
         assertThat(result.getStatus()).isEqualTo(GarageSlotStatus.EMPTY);
         assertThat(result.getCreatedAt()).isNotNull();
@@ -87,18 +90,16 @@ public class GarageSlotRepositoryIT extends DataJpaIntegrationTest {
         addUserCarAndTestGarageToDb();
         GarageSlot exampleSlot = new GarageSlot(TEST_USER_ID, TEST_SLOT_NUMBER, TEST_CAR_ID, GarageSlotStatus.EMPTY);
 
-        assertThatThrownBy(() -> garageSlotRepository.saveAndFlush(exampleSlot))
-                .isInstanceOf(DataIntegrityViolationException.class);
+        assertThrows(DataIntegrityViolationException.class, () -> garageSlotRepository.saveAndFlush(exampleSlot));
     }
 
     @Test
     void checkConstraintGarageSlotStatus_shouldThrowException_whenGarageSlotWithIncorrectStatus() {
         addUserCarAndTestGarageToDb();
 
-        assertThatThrownBy(() -> jdbcTemplate.update("INSERT INTO garage_slots " +
+        assertThrows(DataIntegrityViolationException.class, () -> jdbcTemplate.update("INSERT INTO garage_slots " +
                         "(user_id, slot_number, car_id, status) VALUES (?, ?, ?, ?)",
-                TEST_USER_ID, TEST_SLOT_NUMBER, TEST_CAR_ID, "Invalid")
-        ).isInstanceOf(DataIntegrityViolationException.class);
+                        TEST_USER_ID, TEST_SLOT_NUMBER, TEST_CAR_ID, "Invalid"));
     }
 
     @Test
