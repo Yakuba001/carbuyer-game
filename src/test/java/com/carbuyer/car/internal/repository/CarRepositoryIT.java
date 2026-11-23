@@ -32,12 +32,10 @@ public class CarRepositoryIT extends DataJpaIntegrationTest {
     private static final String TEST_MODEL = "Opel";
     private static final int TEST_MILEAGE = 10_000;
     private static final int TEST_CONDITION_SCORE = 85;
-    private static final String NAME_BOB = "Bob";
-    private static final String EMAIL_BOB = "bob@gmail.com";
 
     @BeforeEach
     public void setup() {
-        addUserToDb(TEST_USER_ID, NAME_BOB, EMAIL_BOB, false);
+        addUserToDb(TEST_USER_ID, "Bob", "bob@gmail.com", false);
     }
 
     @Test
