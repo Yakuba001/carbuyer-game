@@ -2,6 +2,7 @@ package com.carbuyer.user.internal.repository;
 
 import com.carbuyer.containers.DataJpaIntegrationTest;
 import com.carbuyer.user.internal.entity.UserBalance;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -22,6 +23,12 @@ public class UserBalanceRepositoryIT extends DataJpaIntegrationTest {
     private UserBalanceRepository userBalanceRepository;
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    // TODO: just stubbed before full refactored
+    @BeforeEach
+    void setup() {
+        jdbcTemplate.execute("TRUNCATE TABLE users CASCADE");
+    }
 
     @Test
     void checkCascadeDeleting_shouldDeleteUserBalance_whenUserWithSameUserIdIsDeleted() {

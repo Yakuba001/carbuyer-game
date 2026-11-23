@@ -2,6 +2,7 @@ package com.carbuyer.car.internal.repository;
 
 import com.carbuyer.containers.DataJpaIntegrationTest;
 import com.carbuyer.car.internal.entity.Car;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -15,7 +16,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @Transactional
 public class CarRepositoryIT extends DataJpaIntegrationTest {
@@ -25,69 +26,64 @@ public class CarRepositoryIT extends DataJpaIntegrationTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    private static final long TEST_USER_ID = 1L;
+    private static final String TEST_VIN =
+            UUID.randomUUID().toString().replace("-", "").substring(0, 17);
+    private static final String TEST_MODEL = "Opel";
+    private static final int TEST_MILEAGE = 10_000;
+    private static final int TEST_CONDITION_SCORE = 85;
+
+    @BeforeEach
+    public void setup() {
+        addUserToDb(TEST_USER_ID, "Bob", "bob@gmail.com", false);
+    }
+
     @Test
     void checkUniqueField_shouldThrowException_whenVinUnunique() {
-        long userId = 1L;
-        addUserToDb(userId);
-        String randomVin1 = UUID.randomUUID().toString().replace("-", "").substring(0, 17);
-        String model = "Opel";
-        int mileage = 10000;
-        int conditionScore = 85;
-        Car car = new Car(randomVin1, model, mileage, conditionScore, userId);
-        Car duplicateVin = new Car(randomVin1, model, mileage, conditionScore, userId);
+        Car car = new Car(TEST_VIN, TEST_MODEL, TEST_MILEAGE, TEST_CONDITION_SCORE, TEST_USER_ID);
+        Car duplicateVin = new Car(TEST_VIN, TEST_MODEL, TEST_MILEAGE, TEST_CONDITION_SCORE, TEST_USER_ID);
         carRepository.saveAndFlush(car);
 
-        assertThatThrownBy(() -> carRepository.saveAndFlush(duplicateVin))
-                .isInstanceOf(DataIntegrityViolationException.class);
+        assertThrows(DataIntegrityViolationException.class, () -> carRepository.saveAndFlush(duplicateVin));
     }
 
     @Test
     void checkConstraintWhenFieldCanBeOnlyPositive_shouldThrowException_whenMileageLowerThanZero() {
-        long userId = 1L;
-        addUserToDb(userId);
-        addTestCorrectCarToDb(userId);
+        addTestCorrectCarToDb(TEST_USER_ID, TEST_VIN);
         int negativeMileage = -1;
 
-        assertThatThrownBy(() -> jdbcTemplate.update("UPDATE cars SET mileage = ? WHERE owner_id = ?",
-                negativeMileage, userId))
-                .isInstanceOf(DataIntegrityViolationException.class);
+        assertThrows(DataIntegrityViolationException.class,
+                () -> jdbcTemplate.update("UPDATE cars SET mileage = ? WHERE owner_id = ?",
+                negativeMileage, TEST_USER_ID));
     }
 
     @ParameterizedTest
     @ValueSource(ints = {-1, 101})
     void checkConstraint_shouldThrownException_whenConditionScoreNotFrom0To100Borders(int negativeConditionScore) {
-        long userId = 1L;
-        addUserToDb(userId);
-        addTestCorrectCarToDb(userId);
+        addTestCorrectCarToDb(TEST_USER_ID, TEST_VIN);
 
-        assertThatThrownBy(() -> jdbcTemplate.update("UPDATE cars SET condition_score = ? WHERE owner_id = ?",
-                negativeConditionScore, userId))
-                .isInstanceOf(DataIntegrityViolationException.class);
+        assertThrows(DataIntegrityViolationException.class,
+                () -> jdbcTemplate.update("UPDATE cars SET condition_score = ? WHERE owner_id = ?",
+                negativeConditionScore, TEST_USER_ID));
     }
 
     @Test
     void checkConstraintToDeleteUser_shouldThrowException_whenUserHasACar() {
-        long userId = 1L;
-        addUserToDb(userId);
-        addTestCorrectCarToDb(userId);
+        addTestCorrectCarToDb(TEST_USER_ID, TEST_VIN);
 
-        assertThatThrownBy(() -> jdbcTemplate.update("DELETE FROM users WHERE id = ?", userId))
-                .isInstanceOf(DataIntegrityViolationException.class);
+        assertThrows(DataIntegrityViolationException.class,
+                () -> jdbcTemplate.update("DELETE FROM users WHERE id = ?", TEST_USER_ID));
     }
 
     @Test
     void checkDefaultValues_shouldSetDefaultValues_whenUserDidNotSendAmounts() {
-        long userId = 1L;
-        addUserToDb(userId);
-        String randomVin1 = UUID.randomUUID().toString().replace("-", "").substring(0, 17);
-        String model = "Opel";
-        int conditionScore = 85;
-        jdbcTemplate.update("INSERT INTO cars (vin, model, condition_score, owner_id) VALUES (?, ?, ?, ?)",
-                randomVin1, model, conditionScore, userId);
+        UUID carId = UUID.randomUUID();
+        jdbcTemplate.update("INSERT INTO cars (id, vin, model, condition_score, owner_id) VALUES (?, ?, ?, ?, ?)",
+                carId, TEST_VIN, TEST_MODEL, TEST_CONDITION_SCORE, TEST_USER_ID);
 
-        List<Car> saveCarList = carRepository.findAll();
-        Car savedCar = saveCarList.stream().findFirst().orElseThrow();
+        Car savedCar = carRepository.findById(carId).orElse(null);
 
+        assertThat(savedCar).isNotNull();
         assertThat(savedCar.getId()).isNotNull();
         assertThat(savedCar.getMileage()).isEqualTo(0);
         assertThat(savedCar.getCreatedAt()).isNotNull();
@@ -95,45 +91,36 @@ public class CarRepositoryIT extends DataJpaIntegrationTest {
 
     @Test
     void setNewCarOwner_shouldReturnZero_whenCarCantChangedHisOwner() {
-        long userId = 1L;
         long anotherOwnerId = 2L;
         long buyerId = 3L;
-        addUserToDb(anotherOwnerId);
-        UUID carId = addTestCorrectCarToDb(anotherOwnerId);
+        addUserToDb(anotherOwnerId, "John", "john@gmail.com", false);
+        UUID carId = addTestCorrectCarToDb(anotherOwnerId, TEST_VIN);
 
-        int result = carRepository.setNewCarOwner(userId, buyerId, carId);
+        int result = carRepository.setNewCarOwner(TEST_USER_ID, buyerId, carId);
 
         assertThat(result).isEqualTo(0);
     }
 
     @Test
     void setNewCarOwner_shouldReturnOne_whenCarChangedHisOwner() {
-        long ownerId = 1L;
-        addUserToDb(ownerId);
         long buyerId = 2L;
-        String username = "John";
-        String userEmail = "bigJohn@g.com";
-        String userPassword = "bobby123";
-        jdbcTemplate.update("INSERT INTO users (id, name, email, password_hash) OVERRIDING SYSTEM VALUE " +
-                        "VALUES (?, ?, ?, ?)",
-                buyerId, username, userEmail, userPassword);
-        UUID carId = addTestCorrectCarToDb(ownerId);
+        addUserToDb(buyerId, "Arnold", "bigBoy@gmail.com", false);
+        UUID carId = addTestCorrectCarToDb(TEST_USER_ID, TEST_VIN);
         Car exampleCar = carRepository.findById(carId).orElseThrow();
         long currentOwnerId = exampleCar.getOwnerId();
 
-        int result = carRepository.setNewCarOwner(ownerId, buyerId, carId);
+        int result = carRepository.setNewCarOwner(TEST_USER_ID, buyerId, carId);
 
         long newOwnerId = carRepository.findById(carId).orElseThrow().getOwnerId();
+
         assertThat(result).isEqualTo(1);
-        assertThat(currentOwnerId).isEqualTo(ownerId);
+        assertThat(currentOwnerId).isEqualTo(TEST_USER_ID);
         assertThat(newOwnerId).isEqualTo(buyerId);
     }
 
     @Test
     void findForUpdateById_shouldReturnCar_whenCarExists() {
-        long userId = 1L;
-        addUserToDb(userId);
-        UUID carId = addTestCorrectCarToDb(userId);
+        UUID carId = addTestCorrectCarToDb(TEST_USER_ID, TEST_VIN);
 
         Car savedCar = carRepository.findForUpdateById(carId).orElseThrow();
 
@@ -151,18 +138,12 @@ public class CarRepositoryIT extends DataJpaIntegrationTest {
 
     @Test
     void deleteByOwnerIdIn_shouldDeletedCarsInDbByOwnerIds_whenCarWithThisOwnerIdsExistsAndUserIsBot() {
-        long firstUserId = 1L;
         long secondUserId = 2L;
-        List<Long> ownerIds = List.of(firstUserId, secondUserId);
-        addUserToDb(firstUserId);
-        addTestCorrectCarToDb(firstUserId);
-        String username = "Bob1";
-        String userEmail = "bob1@g.com";
-        String userPassword = "bobby123";
-        jdbcTemplate.update("INSERT INTO users (id, name, email, password_hash, is_bot) OVERRIDING SYSTEM VALUE " +
-                        "VALUES (?, ?, ?, ?, ?)",
-                secondUserId, username, userEmail, userPassword, true);
-        addTestCorrectCarToDb(secondUserId);
+        String secondCarVin = UUID.randomUUID().toString().replace("-", "").substring(0, 17);
+        List<Long> ownerIds = List.of(TEST_USER_ID, secondUserId);
+        addUserToDb(secondUserId, "Emi", "nem@gmail.com", true);
+        addTestCorrectCarToDb(TEST_USER_ID, TEST_VIN);
+        addTestCorrectCarToDb(secondUserId, secondCarVin);
 
         long currCarsCount = carRepository.count();
 
@@ -174,22 +155,16 @@ public class CarRepositoryIT extends DataJpaIntegrationTest {
         assertThat(resultCarsCount).isEqualTo(1);
     }
 
-    private UUID addTestCorrectCarToDb(long userId) {
-        String randomVin1 = UUID.randomUUID().toString().replace("-", "").substring(0, 17);
-        String model = "Opel";
-        int mileage = 10000;
-        int conditionScore = 85;
-        Car car = new Car(randomVin1, model, mileage, conditionScore, userId);
+    private UUID addTestCorrectCarToDb(long userId, String vin) {
+        Car car = new Car(vin, TEST_MODEL, TEST_MILEAGE, TEST_CONDITION_SCORE, userId);
         carRepository.saveAndFlush(car);
         return car.getId();
     }
 
-    private void addUserToDb(long userId) {
-        String username = "Bob";
-        String userEmail = "bob@g.com";
+    private void addUserToDb(long userId, String name, String email, boolean isBot) {
         String userPassword = "bobby123";
-        jdbcTemplate.update("INSERT INTO users (id, name, email, password_hash) OVERRIDING SYSTEM VALUE " +
-                        "VALUES (?, ?, ?, ?)",
-                userId, username, userEmail, userPassword);
+        jdbcTemplate.update("INSERT INTO users (id, name, email, password_hash, is_bot) OVERRIDING SYSTEM VALUE " +
+                        "VALUES (?, ?, ?, ?, ?)",
+                userId, name, email, userPassword, isBot);
     }
 }

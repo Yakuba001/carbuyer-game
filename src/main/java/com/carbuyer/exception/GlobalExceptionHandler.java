@@ -21,8 +21,6 @@ import java.util.stream.Collectors;
 @Slf4j
 public class GlobalExceptionHandler {
 
-    // TODO: rename methods..........
-
     @ExceptionHandler({
             EmailAlreadyExistsException.class,
             NameAlreadyExistsException.class,
