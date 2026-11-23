@@ -19,7 +19,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -32,88 +32,75 @@ public class CarServiceTest {
     @InjectMocks
     private CarService service;
 
+    private static final UUID TEST_CAR_ID = UUID.randomUUID();
+    private static final Long TEST_USER_ID = 1L;
+
     @Test
     void isCarOwner_shouldReturnTrue_whenCarExistsOwnerAndSellerIdNotNullAndThisIdsTheSame() {
-        UUID carId = UUID.randomUUID();
-        Long ownerId = 1L;
-        Long sellerId = 1L;
         Car exampleCar =
-                new Car("228", "Opel", 100, 50, ownerId);
-        when(carRepository.findForUpdateById(carId)).thenReturn(Optional.of(exampleCar));
+                new Car("228", "Opel", 100, 50, TEST_USER_ID);
+        when(carRepository.findForUpdateById(TEST_CAR_ID)).thenReturn(Optional.of(exampleCar));
 
-        boolean result = service.isCarOwner(carId, sellerId);
+        boolean result = service.isCarOwner(TEST_CAR_ID, TEST_USER_ID);
 
         assertThat(result).isTrue();
     }
 
     @Test
     void isCarOwner_shouldThrowCarNotFoundException_whenCarDoesNotExist() {
-        UUID carId = UUID.randomUUID();
-        Long sellerId = 1L;
-        assertThatThrownBy(() -> service.isCarOwner(carId, sellerId))
-                .isInstanceOf(CarNotFoundException.class);
+        assertThrows(CarNotFoundException.class, () -> service.isCarOwner(TEST_CAR_ID, TEST_USER_ID));
     }
 
     @Test
     void isCarOwner_shouldReturnFalse_whenSellerIdIsNull() {
-        UUID carId = UUID.randomUUID();
-        Long ownerId = 1L;
         Car exampleCar =
-                new Car("228", "Opel", 100, 50, ownerId);
-        when(carRepository.findForUpdateById(carId)).thenReturn(Optional.of(exampleCar));
+                new Car("228", "Opel", 100, 50, TEST_USER_ID);
+        when(carRepository.findForUpdateById(TEST_CAR_ID)).thenReturn(Optional.of(exampleCar));
 
-        boolean result = service.isCarOwner(carId, null);
+        boolean result = service.isCarOwner(TEST_CAR_ID, null);
 
         assertThat(result).isFalse();
     }
 
     @Test
     void isCarOwner_shouldReturnFalse_whenOwnerIdIsNull() {
-        UUID carId = UUID.randomUUID();
-        Long sellerId = 1L;
         Car exampleCar =
                 new Car("228", "Opel", 100, 50, null);
-        when(carRepository.findForUpdateById(carId)).thenReturn(Optional.of(exampleCar));
+        when(carRepository.findForUpdateById(TEST_CAR_ID)).thenReturn(Optional.of(exampleCar));
 
-        boolean result = service.isCarOwner(carId, sellerId);
+        boolean result = service.isCarOwner(TEST_CAR_ID, TEST_USER_ID);
 
         assertThat(result).isFalse();
     }
 
     @Test
     void isCarOwner_shouldReturnFalse_whenSellerIdIsNotEqualOwnerId() {
-        UUID carId = UUID.randomUUID();
-        Long sellerId = 1L;
         Long ownerId = 2L;
         Car exampleCar =
                 new Car("228", "Opel", 100, 50, ownerId);
-        when(carRepository.findForUpdateById(carId)).thenReturn(Optional.of(exampleCar));
+        when(carRepository.findForUpdateById(TEST_CAR_ID)).thenReturn(Optional.of(exampleCar));
 
-        boolean result = service.isCarOwner(carId, sellerId);
+        boolean result = service.isCarOwner(TEST_CAR_ID, TEST_USER_ID);
 
         assertThat(result).isFalse();
     }
 
     @Test
     void changeCarOwner_shouldReturnFalse_whenRepositoryReturnZero() {
-        UUID carId = UUID.randomUUID();
-        Long sellerId = 1L;
         Long ownerId = 2L;
-        when(carRepository.setNewCarOwner(ownerId, sellerId, carId)).thenReturn(0);
+        when(carRepository.setNewCarOwner(ownerId, TEST_USER_ID, TEST_CAR_ID)).thenReturn(0);
 
-        boolean result = service.changeCarOwner(ownerId, sellerId, carId);
+        boolean result = service.changeCarOwner(ownerId, TEST_USER_ID, TEST_CAR_ID);
 
         assertThat(result).isFalse();
     }
 
     @Test
     void changeCarOwner_shouldReturnTrue_whenRepositoryReturnOne() {
-        UUID carId = UUID.randomUUID();
-        Long sellerId = 1L;
         Long ownerId = 2L;
-        when(carRepository.setNewCarOwner(ownerId, sellerId, carId)).thenReturn(1);
+        when(carRepository.setNewCarOwner(ownerId, TEST_USER_ID, TEST_CAR_ID)).thenReturn(1);
 
-        boolean result = service.changeCarOwner(ownerId, sellerId, carId);
+        boolean result = service.changeCarOwner(ownerId, TEST_USER_ID, TEST_CAR_ID);
 
         assertThat(result).isTrue();
     }
@@ -143,7 +130,7 @@ public class CarServiceTest {
 
     @Test
     void deleteCarsByOwnerIds_shouldThrowEmptyInputCollectionException_whenOwnerIdsListIsNull() {
-        assertThatThrownBy(() -> service.deleteCarsByOwnerIds(null)).isInstanceOf(EmptyInputCollectionException.class);
+        assertThrows(EmptyInputCollectionException.class, () -> service.deleteCarsByOwnerIds(null));
     }
 
     @Test
