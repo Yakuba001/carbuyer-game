@@ -12,6 +12,8 @@ public class ConcurrentUniqueQueueTest {
 
     private ConcurrentUniqueQueue<Long> queue;
 
+    private static final Long EXPECTED_AMOUNT = 1L;
+
     @BeforeEach
     void setup() {
         queue = new ConcurrentUniqueQueue<>();
@@ -19,12 +21,11 @@ public class ConcurrentUniqueQueueTest {
 
     @Test
     void pollFirst_shouldReturnFirstElement_whenSetHasNextTrue() {
-        Long expectedAmount = 1L;
-        queue.addLast(expectedAmount);
+        queue.addLast(EXPECTED_AMOUNT);
 
         Long result = queue.pollFirst();
 
-        assertThat(result).isEqualTo(expectedAmount);
+        assertThat(result).isEqualTo(EXPECTED_AMOUNT);
     }
 
     @Test
@@ -36,9 +37,7 @@ public class ConcurrentUniqueQueueTest {
 
     @Test
     void addLast_shouldAddLastElement() {
-        Long expectedAmount = 1L;
-
-        queue.addLast(expectedAmount);
+        queue.addLast(EXPECTED_AMOUNT);
     }
 
     @Test
@@ -50,16 +49,14 @@ public class ConcurrentUniqueQueueTest {
 
     @Test
     void remove_shouldRemoveItemFromSet() {
-        Long expectedAmount = 1L;
-        queue.addLast(expectedAmount);
+        queue.addLast(EXPECTED_AMOUNT);
 
-        queue.remove(expectedAmount);
+        queue.remove(EXPECTED_AMOUNT);
     }
 
     @Test
     void size_shouldReturnCorrectSize() {
-        Long expectedAmount = 1L;
-        queue.addLast(expectedAmount);
+        queue.addLast(EXPECTED_AMOUNT);
 
         int result = queue.size();
 
@@ -68,8 +65,7 @@ public class ConcurrentUniqueQueueTest {
 
     @Test
     void syncWith_shouldSyncInputItemsWithExistsAndAddedExcludedItems() {
-        Long expectedAmount = 1L;
-        queue.addLast(expectedAmount);
+        queue.addLast(EXPECTED_AMOUNT);
         Set<Long> validItems = Set.of(1L, 2L, 3L);
         Set<Long> excludedItems = Set.of(1L, 2L, 4L);
 
