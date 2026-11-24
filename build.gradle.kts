@@ -55,6 +55,7 @@ dependencies {
     testImplementation("org.awaitility:awaitility:4.2.2")
 
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    runtimeOnly("io.micrometer:micrometer-registry-prometheus")
 }
 
 tasks.withType<Test> {
