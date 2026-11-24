@@ -3,9 +3,11 @@ package com.carbuyer.user.internal.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
@@ -70,7 +72,12 @@ public class User implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of();
+        List<GrantedAuthority> authorities = new ArrayList<>();
+        if (this.isBot) authorities.add(new SimpleGrantedAuthority("ROLE_BOT"));
+        else authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
+        if ("boss@gmail.com".equalsIgnoreCase(this.email))
+            authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
+        return authorities;
     }
 
     @Override

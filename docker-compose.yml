@@ -12,8 +12,8 @@ services:
         limits:
           memory: 650M
     depends_on:
-        postgres:
-          condition: service_healthy
+      postgres:
+        condition: service_healthy
 
   postgres:
     container_name: carbuyer-db
@@ -36,6 +36,35 @@ services:
           memory: 300M
     volumes:
       - pgdata:/var/lib/postgresql/data
+
+  prometheus:
+    container_name: carbuyer-prometheus
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    depends_on:
+      - app
+
+  grafana:
+    container_name: carbuyer-grafana
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    depends_on:
+      - prometheus
 
 volumes:
   pgdata:

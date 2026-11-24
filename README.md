@@ -125,3 +125,30 @@ Run the full verification suite:
 ```
 
 Every push and pull request targeting `main` or `develop` runs the automated **GitHub Actions** pipeline (`Carbuyer CI with Gradle`).
+
+## Observability & Load Testing
+
+The application exposes runtime and connection pool metrics via **Spring Boot Actuator** and **Micrometer** (`/actuator/prometheus`), scraped by **Prometheus** (`5s` interval) and visualized in **Grafana** (Dashboard ID `19004`).
+
+### Benchmark Setup & Results
+Tested with **1,000 autonomous bots** (`500` buyers / `500` sellers) executing concurrently across **500 virtual-thread workers** inside a `650MB` container (`-Xmx450m -Xms256m`) against a `10`-connection HikariCP pool:
+
+* **DB Transaction Duration (`Connection Usage Time`):** drops from `~105 ms` cold-start peak to `~8–10 ms` steady-state post-JIT warmup
+* **Connection Pool Contention (`HikariCP`):** `0` pending threads and `0` connection timeouts (`1.43` mean / `7` max active connections out of `10`, `< 0.5 ms` steady-state acquire time)
+* **Memory Footprint:** `14.8%` (`~66.6 MB`) of `450 MB` heap cap; `0 B` promoted to Old Gen under sustained load (no memory leaks)
+* **OS Thread Overhead & CPU:** `32` live (`35` peak) platform carrier threads backing `500` virtual workers at `3.6%` mean / `6.3%` steady-state process CPU usage (`29.2%` startup peak)
+
+<p align="center">
+  <img src="docs/images/grafana-overview.png" alt="Basic Statistics & CPU" width="100%" /><br/>
+  <sub><b>Overview:</b> Heap usage (14.8%), Non-Heap (13.2%), and Process CPU profile during JIT warmup and steady-state load</sub>
+</p>
+
+<p align="center">
+  <img src="docs/images/grafana-hikaricp.png" alt="HikariCP Connection Pool Statistics" width="100%" /><br/>
+  <sub><b>HikariCP Pool:</b> Zero pending threads, 0 timeouts, 1.43 mean active connections (max 7/10), and ~8–10 ms steady-state transaction usage time</sub>
+</p>
+
+<p align="center">
+  <img src="docs/images/grafana-threads-memory.png" alt="Threads & Memory Allocation" width="100%" /><br/>
+  <sub><b>Threads & Memory:</b> 32 live (35 peak) OS carrier threads backing 500 virtual workers with 0 B sustained Old Gen promotion</sub>
+</p>
