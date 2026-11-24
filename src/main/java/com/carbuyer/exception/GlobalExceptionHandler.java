@@ -96,7 +96,7 @@ public class GlobalExceptionHandler {
             EmptyInputCollectionException.class,
             StartBotsException.class})
     public ResponseEntity<ErrorResponse> handleInternalServerError(RuntimeException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ErrorResponse(500, "Internal server error", ex.getMessage(), Instant.now()));
     }
 
