@@ -24,7 +24,6 @@ public class UserBalanceRepositoryIT extends DataJpaIntegrationTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    // TODO: just stubbed before full refactored
     @BeforeEach
     void setup() {
         jdbcTemplate.execute("TRUNCATE TABLE users CASCADE");
