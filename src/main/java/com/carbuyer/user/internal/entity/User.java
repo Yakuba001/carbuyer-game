@@ -75,7 +75,8 @@ public class User implements UserDetails {
         List<GrantedAuthority> authorities = new ArrayList<>();
         if (this.isBot) authorities.add(new SimpleGrantedAuthority("ROLE_BOT"));
         else authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
-        if ("adm@gmail.com".equalsIgnoreCase(this.email)) authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
+        if ("boss@gmail.com".equalsIgnoreCase(this.email))
+            authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
         return authorities;
     }
 
