@@ -35,8 +35,6 @@ public class GarageSlotRepositoryIT extends DataJpaIntegrationTest {
     private static final int TEST_SLOT_NUMBER = 1;
     private static final UUID TEST_CAR_ID = UUID.randomUUID();
 
-    // TODO: need to refactor it too
-
     @ParameterizedTest
     @MethodSource("objWithNullElements")
     void checkNotNullConstraints_shouldThrowException_whenInputFieldsAreNull(GarageSlot garageSlot) {
