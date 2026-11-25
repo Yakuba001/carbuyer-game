@@ -8,29 +8,10 @@ Built with **Java 21 (Virtual Threads)**, **Spring Boot 3.3**, **PostgreSQL 16**
 
 The system follows a **Modular Monolith** pattern. Domain contexts (`user`, `car`, `garage`, `market`) encapsulate their own entities, repositories, and services, exposing functionality strictly through explicit **Facade interfaces**. The `bot` simulation engine is an internal orchestrator with no outgoing facade—it interacts with the outside world solely via `BotController` and consumes domain facades.
 
-<div align="center">
-
-```text
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                               REST API Layer                                │
-│         AuthController      │      MarketController      │   BotController  │
-└───────────────┬─────────────┴─────────────┬──────────────┴─────────┬────────┘
-                │                           │                        │
-                ▼                           ▼                        ▼
-        ┌───────────────┐           ┌───────────────┐        ┌───────────────┐
-        │   Security    │           │    Market     │        │      Bot      │
-        │     (JWT)     │           │    Module     │        │    Engine     │
-        └───────┬───────┘           └───────┬───────┘        └───────┬───────┘
-                │                           │                        │
-                │   ┌───────────────────────┴────────────────────────┘
-                │   │              (Strict Facade Boundaries)
-                ▼   ▼
-┌────────────────┐  ┌────────────────┐  ┌────────────────┐  ┌─────────────────┐
-│   UserFacade   │  │   CarFacade    │  │  GarageFacade  │  │  MarketFacade   │
-└────────────────┘  └────────────────┘  └────────────────┘  └─────────────────┘
-```
-
-</div>
+<p align="center">
+  <img src="docs/images/scheme.jpg" alt="Basic Statistics & CPU" width="1454" /><br/>
+  <sub><b>Architecture:</b> Modular monolith request flow from REST controllers through domain modules and strict facade boundaries</sub>
+</p>
 
 ## Key Engineering Decisions
 
